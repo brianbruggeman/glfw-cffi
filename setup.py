@@ -24,7 +24,7 @@ from setuptools import setup
 
 setup(
     name='glfw-cffi',
-    version='0.1.0',
+    version='0.1.1',
     author='Brian Bruggeman',
     author_email='brian.m.bruggeman@gmail.com',
     description='Foreign Function Interface wrapper for GLFW v3.x',
@@ -38,6 +38,7 @@ setup(
         'Topic :: Multimedia :: Graphics :: 3D Rendering',
         'Topic :: Multimedia :: Graphics :: Viewers',
         'Topic :: Software Development :: User Interfaces',
+        'Intended Audience :: Developers',
         'Intended Audience :: Education',
         'Development Status :: 3 - Alpha',
         'License :: OSI Approved :: GNU General Public License (GPL)',
