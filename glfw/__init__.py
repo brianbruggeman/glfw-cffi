@@ -1,38 +1,64 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# ######################################################################
-#  Wrapper file for Python GLFW CFFI library
-#  Used GLFW v3.2 api
-#  Created by Brian Bruggeman
-#  Copyright (c) 2016
-#
-#  License:  This file is released as Apache 2.0 license.  However, at
-#  your option, you may apply any free software license you choose
-#  provided that you adhere to the free software license chosen and
-#  additionally follow these three criteria:
-#   a. list the author's name of this software as a contributor to your
-#      final product
-#   b. provide credit to your end user of your product or software without
-#      your end user asking for where you obtained your software
-#   c. notify the author of this software that you are using this software
-#   d. in addition, if you believe there can be some benefit in providing
-#      your changes upstream, you'll submit a change request.  While this
-#      criteria is completely optional, please consider not being a dick.
-# ######################################################################
+'''
+Wrapper file for Python GLFW CFFI library
+
+Created by Brian Bruggeman
+Copyright (c) 2016
+
+Usage:
+
+    >>> import glfw
+    >>> if not glfw.init():
+    ...     raise RuntimeError('Could not initialize glfw')
+    >>> win = glfw.create_window(640, 480, 'Sample')
+    >>> while (not glfw.window_should_close(win)):  # ctrl+c to break
+    ...     # Render scene here
+    ...     glfw.swap_buffers(win)  # by default, glfw is double buffered
+    ...     glfw.poll_events()
+    >>> glfw.terminate()
+
+
+License:  This file is released as Apache 2.0 license.  However, at
+your option, you may apply any free software license you choose
+provided that you adhere to the free software license chosen and
+additionally follow these three criteria:
+ a. list the author's name of this software as a contributor to your
+    final product
+ b. provide credit to your end user of your product or software without
+    your end user asking for where you obtained your software
+ c. notify the author of this software that you are using this software
+ d. in addition, if you believe there can be some benefit in providing
+    your changes upstream, you'll submit a change request.  While this
+    criteria is completely optional, please consider not being a dick.
+'''
 from ctypes.util import find_library as _find_library
 import fnmatch
+import imp
 import os
 import re
 import sys
 
 from cffi import FFI
 
+
 if sys.version[0] == 2:
     range = xrange
 
+modname = os.path.basename(os.path.dirname(__file__))
+
 ###############################################################################
+__title__ = 'glfw'
+__version__ = '0.1.1-dev'
+__author__ = 'Brian Bruggeman'
+__email__ = 'brian.m.bruggeman@gmail.com'
+__license__ = 'Apache 2.0'
+__copyright__ = 'Copyright 2016 Brian Bruggeman'
+__url__ = 'https://github.com/brianbruggeman/glfw-cffi.git'
+__shortdesc__ = 'Foreign Function Interface wrapper for GLFW v3.x'
 
 
+###############################################################################
 def _get_function_declaration(line):
     found = None
     pattern = ''.join((
@@ -113,6 +139,7 @@ def _wrap_func(ffi, func_decl, func):
         func_fields.append((arg, ctype))
     fields = dict(func_fields)
 
+    # Auto-wrapper for cffi function call
     def wrapper(*args, **kwds):
         retval = []
         if func_args:
@@ -157,22 +184,41 @@ def _wrap_func(ffi, func_decl, func):
             retval = [l[0] for l in retval]
         return retval
 
-    wrapper.__doc__ = func.__doc__
-    if not wrapper.__doc__:
+    def rename_code_object(func, new_name):
+        '''Magic bit so a stack trace and profiling doesn't identify wrapper
+        as the function'''
+        code_object = func.__code__
+        function, code = type(func), type(code_object)
+        return function(
+            code(
+                code_object.co_argcount, code_object.co_nlocals,
+                code_object.co_stacksize, code_object.co_flags,
+                code_object.co_code, code_object.co_consts,
+                code_object.co_names, code_object.co_varnames,
+                code_object.co_filename, new_name,
+                code_object.co_firstlineno, code_object.co_lnotab,
+                code_object.co_freevars, code_object.co_cellvars),
+            func.__globals__, new_name, func.__defaults__, func.__closure__)
+
+    # Newly wrapped function
+    new_func = rename_code_object(wrapper, func_decl['snake_name'])
+
+    docstring = func.__doc__
+    if not docstring:
         if func_args:
             if func_res.kind != 'void':
-                wrapper.__doc__ = '{result} {snake_name}({args})'.format(**func_decl)
+                docstring = '{result} {snake_name}({args})'.format(**func_decl)
             else:
-                wrapper.__doc__ = '{snake_name}({args})'.format(**func_decl)
+                docstring = '{snake_name}({args})'.format(**func_decl)
         else:
             if func_res.kind != 'void':
-                wrapper.__doc__ = '{result} {snake_name}()'.format(**func_decl)
+                docstring = '{result} {snake_name}()'.format(**func_decl)
             else:
-                wrapper.__doc__ = '{snake_name}()'.format(**func_decl)
+                docstring = '{snake_name}()'.format(**func_decl)
+    new_func.__doc__ = docstring
+    # wrapper.__name__ = func_decl['snake_name']
 
-    wrapper.__name__ = func_decl['snake_name']
-
-    return wrapper
+    return new_func
 
 
 def _camelToSnake(string):
@@ -180,6 +226,18 @@ def _camelToSnake(string):
     pass01 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', string)
     final = re.sub('([a-z0-9])([A-Z])', r'\1_\2', pass01).lower()
     return final
+
+
+def get_include():
+    '''Returns header_path found during initialization'''
+    global header_path
+    include_path = header_path
+    if include_path is not None:
+        while include_path not in ['/', '']:
+            if include_path.split(os.path.sep)[-1] == 'include':
+                break
+            include_path = os.path.dirname(include_path)
+    return include_path
 
 
 # Modifies the module directly by introspection and loading up glfw
@@ -204,6 +262,7 @@ def _initialize_module(ffi):
     # Else, we failed and exit
     if glfw_library is None:
         raise OSError('GLFW library not found')
+    globals()['glfw_library'] = glfw_library
 
     # Look for the header being used
     include_found = False
@@ -216,7 +275,7 @@ def _initialize_module(ffi):
         if not include_found:
             include_path = os.path.dirname(include_path)
 
-    library_path = None
+    header_path = None
     for root, folders, files in os.walk(include_path):
         for filename in sorted(files):
             filepath = os.path.join(root, filename)
@@ -225,18 +284,19 @@ def _initialize_module(ffi):
             if 'glfw' not in filepath.lower():
                 continue
             if fnmatch.fnmatch(filename, 'glfw*.h'):
-                library_path = filepath
+                header_path = filepath
                 break
-        if library_path:
+        if header_path:
             break
 
+    globals()['header_path'] = header_path
     # If library header was not found, then use the one provided in repo
-    if library_path is None:
+    if header_path is None:
         source_path = os.path.dirname(__file__)
         source_path = os.path.join(source_path, 'glfw3.h')
 
     # Parse header
-    with open(library_path, 'r') as f:
+    with open(header_path, 'r') as f:
         source = _fix_source(f.read())
     ffi.cdef(source)
 
@@ -282,25 +342,65 @@ def _initialize_module(ffi):
         for d in dir(_glfw)
     }
 
+    # Segregate python from cffi
+    core = imp.new_module('core')
+    sys.modules['{}.core'.format(modname)] = core
+    core.__dict__.update(camelCase)
+
     # Add standard API to module.  Note the lack of wrapping
-    globals().update(camelCase)
+    globals()['core'] = core
+
+    # Update decorators
+    decorators = imp.new_module('decorators')
+    sys.modules['{}.decorators'.format(modname)] = decorators
+    decorators.__dict__.update(
+        dict(
+            char_callback=ffi.callback('void (GLFWwindow*, unsigned int)'),
+            cursor_enter_callback=ffi.callback('void (GLFWwindow*, int)'),
+            cursor_pos_callback=ffi.callback('void (GLFWwindow*, double, double)'),
+            error_callback=ffi.callback('void (int, const char*)'),
+            frame_buffersize_callback=ffi.callback('void (GLFWwindow*, int, int)'),
+            key_callback=ffi.callback('void (GLFWwindow*, int, int, int, int)'),
+            monitor_callback=ffi.callback('void (GLFWmonitor*, int)'),
+            mouse_button_callback=ffi.callback('void (GLFWwindow*, int, int, int)'),
+            scroll_callback=ffi.callback('void (GLFWwindow*, double, double)'),
+            window_close_callback=ffi.callback('void (GLFWwindow*)'),
+            window_focus_callback=ffi.callback('void (GLFWwindow*, int)'),
+            window_iconify_callback=ffi.callback('void (GLFWwindow*, int)'),
+            window_pos_callback=ffi.callback('void (GLFWwindow*, int, int)'),
+            window_refresh_callback=ffi.callback('void (GLFWwindow*)'),
+            window_size_callback=ffi.callback('void (GLFWwindow*, int, int)'),
+        )
+    )
+
+    # Add decorators module.  Note the lack of wrapping
+    globals()['decorators'] = decorators
 
     return ffi, _glfw
 
-# Adds glfw3 functions to module namespace
+# Cleanup namespace
 _ffi, _glfw = _initialize_module(FFI())
+globs = {k: v for k, v in globals().items()}
+for func in globs:
+    if func not in ['_ffi', '_glfw']:
+        if (func.startswith('_') and not func.startswith('__')) or func in ['modname']:
+            globals().pop(func)
+globals().pop('globs')
+globals().pop('func')
 
 
 ###############################################################################
-# Functions that needed to be addressed by hand
+# Hand written functions
 ###############################################################################
 def create_window(width=640, height=480, title="Untitled", monitor=None, context=None):
-    '''Creates a window'''
-    # Context is used when state from one window needs to be transferred
-    #  to the new window.  A GlfwWindow * can be used for context.
-    #  This is common when switching between full-screen and windowed
-    #  mode.  During this operation, the window must be destroyed and
-    #  re-created.
+    '''Creates a window
+
+    Context is used when state from one window needs to be transferred
+    to the new window.  A GlfwWindow * can be used for context.
+    This is common when switching between full-screen and windowed
+    mode.  During this operation, the window must be destroyed and
+    re-created.
+    '''
     if monitor is None:
         monitor = _ffi.NULL
     if context is None:
@@ -311,33 +411,13 @@ def create_window(width=640, height=480, title="Untitled", monitor=None, context
 
 
 ###############################################################################
-# Callback decorators
-###############################################################################
-char_callback = _ffi.callback('void (GLFWwindow*, unsigned int)')
-cursor_enter_callback = _ffi.callback('void (GLFWwindow*, int)')
-cursor_pos_callback = _ffi.callback('void (GLFWwindow*, double, double)')
-error_callback = _ffi.callback('void (int, const char*)')
-frame_buffersize_callback = _ffi.callback('void (GLFWwindow*, int, int)')
-key_callback = _ffi.callback('void (GLFWwindow*, int, int, int, int)')
-monitor_callback = _ffi.callback('void (GLFWmonitor*, int)')
-mouse_button_callback = _ffi.callback('void (GLFWwindow*, int, int, int)')
-scroll_callback = _ffi.callback('void (GLFWwindow*, double, double)')
-window_close_callback = _ffi.callback('void (GLFWwindow*)')
-window_focus_callback = _ffi.callback('void (GLFWwindow*, int)')
-window_iconify_callback = _ffi.callback('void (GLFWwindow*, int)')
-window_pos_callback = _ffi.callback('void (GLFWwindow*, int, int)')
-window_refresh_callback = _ffi.callback('void (GLFWwindow*)')
-window_size_callback = _ffi.callback('void (GLFWwindow*, int, int)')
-
-
-###############################################################################
 # Special error handler callback
 ###############################################################################
 _error_callback_wrapper = None
 
 
 def set_error_callback(func):
-    @error_callback
+    @decorators.error_callback
     def wrapper(error, description):
         return func(error, _ffi.string(description))
     global _error_callback_wrapper

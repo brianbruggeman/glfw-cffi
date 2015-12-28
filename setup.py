@@ -20,16 +20,31 @@
 #      criteria is completely optional, please consider not being a dick.
 # ######################################################################
 from setuptools import setup
+import re
+
+pattern = '^__(?P<key>[0-9_A-Za-z]+)__\s+\=\s+[\'"]?(?P<value>.*)[\'"]?$'
+eng = re.compile(pattern)
+
+with open('glfw/__init__.py', 'r') as fd:
+    data = {}
+    for line in fd:
+        if eng.search(line):
+            group_data = [m.groupdict() for m in eng.finditer(line)][0]
+            key = group_data['key']
+            value = group_data['value']
+            if value.endswith("'"):
+                value = value.rstrip("'")
+            data[key] = value
 
 
 setup(
-    name='glfw-cffi',
-    version='0.1.1',
-    author='Brian Bruggeman',
-    author_email='brian.m.bruggeman@gmail.com',
-    description='Foreign Function Interface wrapper for GLFW v3.x',
-    license='Apache 2.0',
-    url='https://github.com/brianbruggeman/glfw-cffi.git',
+    name=data.get('title'),
+    version=data.get('version'),
+    author=data.get('author'),
+    author_email=data.get('email'),
+    description=data.get('shortdesc'),
+    license=data.get('license'),
+    url=data.get('url'),
     keywords='GLFW, CFFI',
     packages=['glfw'],
     package_data={'glfw': ['glfw/*.h']},
