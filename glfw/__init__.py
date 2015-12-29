@@ -49,7 +49,7 @@ modname = os.path.basename(os.path.dirname(__file__))
 
 ###############################################################################
 __title__ = 'glfw-cffi'
-__version__ = '0.1.1'
+__version__ = '0.1.2-dev'
 __author__ = 'Brian Bruggeman'
 __email__ = 'brian.m.bruggeman@gmail.com'
 __license__ = 'Apache 2.0'
@@ -289,12 +289,12 @@ def _initialize_module(ffi):
         if header_path:
             break
 
-    globals()['header_path'] = header_path
     # If library header was not found, then use the one provided in repo
     if header_path is None:
         source_path = os.path.dirname(__file__)
-        source_path = os.path.join(source_path, 'glfw3.h')
+        header_path = os.path.join(source_path, 'glfw3.h')
 
+    globals()['header_path'] = header_path
     # Parse header
     with open(header_path, 'r') as f:
         source = _fix_source(f.read())

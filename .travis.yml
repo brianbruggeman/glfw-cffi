@@ -1,0 +1,55 @@
+sudo: required
+language: python
+dist: trusty  # wily
+python:
+    - "2.7"
+    - "3.5"
+    # - "3.5-dev" # 3.5 development branch
+    # - "nightly" # currently points to 3.6-dev
+    - "pypy"
+branches:
+    only:
+        - master
+        - develop
+os:
+  - linux
+  # - osx
+  # - windows
+matrix:
+  allow_failures:
+      - python: "3.5"
+#     - os: osx
+#     # - os: linux
+#     - os: windows
+
+
+# Runs first
+install:
+    - pip install -r requirements.txt
+    - pip install .
+
+# Install system dependencies
+before_script:
+   # install GL related libs from utopic
+   - sudo add-apt-repository 'deb http://us.archive.ubuntu.com/ubuntu/ wily main restricted universe multiverse'
+   - sudo add-apt-repository 'deb http://us.archive.ubuntu.com/ubuntu/ wily-updates main restricted universe multiverse'
+   - sudo apt-get update -qq
+   - cmake --version
+   # remove existing cmake
+   - sudo dpkg -r cmake cmake-data
+   # install newer version
+   - sudo apt-get install -y cmake
+   - cmake --version
+   # install glut and xxf86vm (for GL libs)
+   - sudo apt-get install -y freeglut3-dev
+   - sudo apt-get install -y libxxf86vm-dev
+   # install GLEW
+   - sudo apt-get install -y libglew-dev
+   # install GLFW3
+   - sudo apt-get install -y libglfw3-dev
+   - sudo apt-get install -y tree
+
+# command to run tests
+script:
+   # - tree `python -c 'import pip; import os; path = os.path.dirname(os.path.dirname(pip.__file__)); print(path)'`
+   - nosetests
