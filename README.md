@@ -1,4 +1,4 @@
-GLFW-CFFI
+GLFW-CFFI [![Build Status](https://travis-ci.org/brianbruggeman/glfw-cffi.svg)](https://travis-ci.org/brianbruggeman/glfw-cffi)
 ---------
 
 A wrapper for GLFW3 using Python's CFFI.
@@ -23,10 +23,29 @@ The goal for this package is that the user won't know they're using
 a C library underneath and the package interface will feel completely
 natural within Python.
 
+## License:
+
+This package is released as Apache 2.0 license.
+
+However, at your option, you may apply any OSI approved free software
+license you choose provided that you adhere to the free software license
+chosen and additionally follow these criteria:
+
+ a. list the author's name of this software as a contributor to your
+    final product
+
+ b. provide credit to your end user of your product or software without
+    your end user asking for where you obtained your software
+
+ c. notify the author of this software that you are using this software
+
+ d. If you believe there can be some benefit in providing your changes
+    upstream, you'll submit a change request.  While this criteria is
+    completely optional, please consider not being a dick.
+
 ## Installation:
 
    python setup.py install
-
 
 ## Requirements:
 
@@ -65,6 +84,19 @@ For example, a simple program to open a window might look like:
 I have added the function signatures from the header code into the
 docstrings for the functions.  This should provide at least some help
 when trying to write a program for the first time using this library.
+
+If you happen to feel like you miss the old style found directly within
+the c-code, you may use them as follows.  This should help with porting
+old code directly into cffi or following the numerous examples within
+the GLFW docs:
+
+        from glfw.core import *
+
+        glfwInit()
+        glfwCreateWindow(640, 480, 'Hello, World!')
+        ...
+        glfwTerminate()
+
 
 ## Contributions:
 

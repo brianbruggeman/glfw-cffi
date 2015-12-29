@@ -1,31 +1,33 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# ######################################################################
-#  Wrapper file for Python GLFW CFFI library
-#  Used GLFW v3.2 api
-#  Created by Brian Bruggeman
-#  Copyright (c) 2016
-#
-#  License:  This file is released as Apache 2.0 license.  However, at
-#  your option, you may apply any free software license you choose
-#  provided that you adhere to the free software license chosen and
-#  additionally follow these three criteria:
-#   a. list the author's name of this software as a contributor to your
-#      final product
-#   b. provide credit to your end user of your product or software without
-#      your end user asking for where you obtained your software
-#   c. notify the author of this software that you are using this software
-#   d. in addition, if you believe there can be some benefit in providing
-#      your changes upstream, you'll submit a change request.  While this
-#      criteria is completely optional, please consider not being a dick.
-# ######################################################################
+'''
+Wrapper file for Python GLFW CFFI library
+
+Created by Brian Bruggeman
+Copyright (c) 2016
+
+License:  This file is released as Apache 2.0 license.  However, at
+your option, you may apply any free software license you choose
+provided that you adhere to the free software license chosen and
+additionally follow these three criteria:
+ a. list the author's name of this software as a contributor to your
+    final product
+ b. provide credit to your end user of your product or software without
+    your end user asking for where you obtained your software
+ c. notify the author of this software that you are using this software
+ d. in addition, if you believe there can be some benefit in providing
+    your changes upstream, you'll submit a change request.  While this
+    criteria is completely optional, please consider not being a dick.
+'''
 from setuptools import setup
 import re
 
 pattern = '^__(?P<key>[0-9_A-Za-z]+)__\s+\=\s+[\'"]?(?P<value>.*)[\'"]?$'
 eng = re.compile(pattern)
 
-with open('glfw/__init__.py', 'r') as fd:
+top_folder = 'glfw'
+# Grab information without importing
+with open('{}/__init__.py'.format(top_folder), 'r') as fd:
     data = {}
     for line in fd:
         if eng.search(line):
@@ -46,8 +48,8 @@ setup(
     license=data.get('license'),
     url=data.get('url'),
     keywords='GLFW, CFFI',
-    packages=['glfw'],
-    package_data={'glfw': ['glfw/*.h']},
+    packages=[top_folder],
+    package_data={'': ['*.h']},
     classifiers=[
         'Topic :: Multimedia :: Graphics',
         'Topic :: Multimedia :: Graphics :: 3D Rendering',

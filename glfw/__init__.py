@@ -49,7 +49,7 @@ modname = os.path.basename(os.path.dirname(__file__))
 
 ###############################################################################
 __title__ = 'glfw-cffi'
-__version__ = '0.1.1'
+__version__ = '0.1.2-dev'
 __author__ = 'Brian Bruggeman'
 __email__ = 'brian.m.bruggeman@gmail.com'
 __license__ = 'Apache 2.0'
@@ -62,8 +62,8 @@ __shortdesc__ = 'Foreign Function Interface wrapper for GLFW v3.x'
 def _get_function_declaration(line):
     found = None
     pattern = ''.join((
-        r'^\s*(?P<result>([A-Za-z_0-9]+))\s+',
-        r'(?P<func_name>([A-Za-z_0-9]+))',
+        r'^\s*(?P<result>(.*))\s+',
+        r'(?P<func_name>(glfw[A-Za-z_0-9*]+))',
         r'\((?P<args>(.*))\)\;\s*$'
     ))
     eng = re.compile(pattern)
@@ -189,16 +189,34 @@ def _wrap_func(ffi, func_decl, func):
         as the function'''
         code_object = func.__code__
         function, code = type(func), type(code_object)
-        return function(
-            code(
-                code_object.co_argcount, code_object.co_nlocals,
-                code_object.co_stacksize, code_object.co_flags,
-                code_object.co_code, code_object.co_consts,
-                code_object.co_names, code_object.co_varnames,
-                code_object.co_filename, new_name,
-                code_object.co_firstlineno, code_object.co_lnotab,
-                code_object.co_freevars, code_object.co_cellvars),
-            func.__globals__, new_name, func.__defaults__, func.__closure__)
+        co_code = code_object.co_code
+        co_lnotab = code_object.co_lnotab
+        if sys.version.startswith('3'):
+            # co_code = int.from_bytes(co_code, byteorder=sys.byteorder)
+            # print('co_code: {}'.format(co_code))
+            co_lnotab = int.from_bytes(co_lnotab, byteorder=sys.byteorder)
+            print('co_lnotab: {}'.format(co_lnotab))
+        code_objects = (
+            code_object.co_argcount,
+            code_object.co_nlocals,
+            code_object.co_stacksize,
+            code_object.co_flags,
+            co_code,
+            code_object.co_consts,
+            code_object.co_names,
+            code_object.co_varnames,
+            code_object.co_filename,
+            new_name,
+            code_object.co_firstlineno,
+            co_lnotab,
+            code_object.co_freevars,
+            code_object.co_cellvars
+        )
+        new_func = function(
+            code(*code_objects),
+            func.__globals__, new_name, func.__defaults__, func.__closure__
+        )
+        return new_func
 
     # Newly wrapped function
     new_func = rename_code_object(wrapper, func_decl['snake_name'])
@@ -289,12 +307,12 @@ def _initialize_module(ffi):
         if header_path:
             break
 
-    globals()['header_path'] = header_path
     # If library header was not found, then use the one provided in repo
     if header_path is None:
         source_path = os.path.dirname(__file__)
-        source_path = os.path.join(source_path, 'glfw3.h')
+        header_path = os.path.join(source_path, 'glfw3.h')
 
+    globals()['header_path'] = header_path
     # Parse header
     with open(header_path, 'r') as f:
         source = _fix_source(f.read())
@@ -316,7 +334,14 @@ def _initialize_module(ffi):
         if func_decl:
             snake_name = func_decl['snake_name']
             if snake_name in funcs:
-                funcs[snake_name] = _wrap_func(ffi, func_decl, funcs[snake_name])
+                try:
+                    some_func = funcs[snake_name]
+                    funcs[snake_name] = _wrap_func(ffi, func_decl, some_func)
+                except Exception as e:
+                    import traceback as tb;
+                    print(tb.format_exc(e))
+                    import pdb; pdb.set_trace()
+                    pass
             else:
                 func = getattr(_glfw, func_decl['func_name'], None)
                 if func:
