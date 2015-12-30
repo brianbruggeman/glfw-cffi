@@ -4,8 +4,8 @@ dist: trusty  # wily
 python:
     - "2.7"
     - "3.5"
-    # - "3.5-dev" # 3.5 development branch
-    # - "nightly" # currently points to 3.6-dev
+    - "3.5-dev" # 3.5 development branch
+    - "nightly" # currently points to 3.6-dev
     - "pypy"
 branches:
     only:
@@ -18,6 +18,8 @@ os:
 matrix:
   allow_failures:
       - python: "3.5"
+      - python: "3.5-dev"
+      - python: "nightly"
 #     - os: osx
 #     # - os: linux
 #     - os: windows
