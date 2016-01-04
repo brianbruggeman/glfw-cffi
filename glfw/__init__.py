@@ -400,7 +400,6 @@ def _initialize_module(ffi):
 
     # Add decorators module.  Note the lack of wrapping
     globals()['decorators'] = decorators
-
     return ffi, _glfw
 
 # Cleanup namespace
@@ -448,3 +447,37 @@ def set_error_callback(func):
     global _error_callback_wrapper
     _error_callback_wrapper = wrapper
     _glfw.glfwSetErrorCallback(wrapper)
+
+
+###############################################################################
+# Special helper functions
+###############################################################################
+def get_key_string(key):
+    '''Returns the name of a key'''
+    val = 'KEY_'
+    globs = dict(globals().items())
+    lookup = {v: k.replace(val, '').lower() for k, v in globs.items() if k.startswith(val)}
+    string = lookup.get(key, key)
+    return string
+
+
+def get_mod_string(mods):
+    '''Returns the name of a modifier'''
+    val = 'MOD_'
+    lookup = {v: k.replace(val, '').lower() for k, v in globals().items() if k.startswith(val)}
+    string = '+'.join(sorted({v for m, v in lookup.items() if m & mods}))
+    return string
+
+
+def get_mouse_button_string(button):
+    '''Returns the name of a modifier'''
+    val = 'MOUSE_BUTTON_'
+    lookup = {v: k.replace(val, '').lower() for k, v in sorted(globals().items()) if k.startswith(val)}
+    string = lookup.get(button, button)
+    return string
+
+
+def get_action_string(action):
+    '''Returns the name of a modifier'''
+    options = ['RELEASE', 'PRESS', 'REPEAT']
+    return {v: k.lower() for k, v in globals().items() if k in options}.get(action, action)
