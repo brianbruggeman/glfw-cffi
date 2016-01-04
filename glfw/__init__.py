@@ -49,7 +49,7 @@ modname = os.path.basename(os.path.dirname(__file__))
 
 ###############################################################################
 __title__ = 'glfw-cffi'
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 __author__ = 'Brian Bruggeman'
 __email__ = 'brian.m.bruggeman@gmail.com'
 __license__ = 'Apache 2.0'
@@ -62,8 +62,8 @@ __shortdesc__ = 'Foreign Function Interface wrapper for GLFW v3.x'
 def _get_function_declaration(line):
     found = None
     pattern = ''.join((
-        r'^\s*(?P<result>([A-Za-z_0-9]+))\s+',
-        r'(?P<func_name>([A-Za-z_0-9]+))',
+        r'^\s*(?P<result>(.*))\s+',
+        r'(?P<func_name>(glfw[A-Za-z_0-9*]+))',
         r'\((?P<args>(.*))\)\;\s*$'
     ))
     eng = re.compile(pattern)
@@ -189,16 +189,34 @@ def _wrap_func(ffi, func_decl, func):
         as the function'''
         code_object = func.__code__
         function, code = type(func), type(code_object)
-        return function(
-            code(
-                code_object.co_argcount, code_object.co_nlocals,
-                code_object.co_stacksize, code_object.co_flags,
-                code_object.co_code, code_object.co_consts,
-                code_object.co_names, code_object.co_varnames,
-                code_object.co_filename, new_name,
-                code_object.co_firstlineno, code_object.co_lnotab,
-                code_object.co_freevars, code_object.co_cellvars),
-            func.__globals__, new_name, func.__defaults__, func.__closure__)
+        co_code = code_object.co_code
+        co_lnotab = code_object.co_lnotab
+        if sys.version.startswith('3'):
+            # co_code = int.from_bytes(co_code, byteorder=sys.byteorder)
+            # print('co_code: {}'.format(co_code))
+            co_lnotab = int.from_bytes(co_lnotab, byteorder=sys.byteorder)
+            print('co_lnotab: {}'.format(co_lnotab))
+        code_objects = (
+            code_object.co_argcount,
+            code_object.co_nlocals,
+            code_object.co_stacksize,
+            code_object.co_flags,
+            co_code,
+            code_object.co_consts,
+            code_object.co_names,
+            code_object.co_varnames,
+            code_object.co_filename,
+            new_name,
+            code_object.co_firstlineno,
+            co_lnotab,
+            code_object.co_freevars,
+            code_object.co_cellvars
+        )
+        new_func = function(
+            code(*code_objects),
+            func.__globals__, new_name, func.__defaults__, func.__closure__
+        )
+        return new_func
 
     # Newly wrapped function
     new_func = rename_code_object(wrapper, func_decl['snake_name'])
@@ -289,12 +307,12 @@ def _initialize_module(ffi):
         if header_path:
             break
 
-    globals()['header_path'] = header_path
     # If library header was not found, then use the one provided in repo
     if header_path is None:
         source_path = os.path.dirname(__file__)
-        source_path = os.path.join(source_path, 'glfw3.h')
+        header_path = os.path.join(source_path, 'glfw3.h')
 
+    globals()['header_path'] = header_path
     # Parse header
     with open(header_path, 'r') as f:
         source = _fix_source(f.read())
@@ -304,11 +322,26 @@ def _initialize_module(ffi):
     _glfw = ffi.dlopen(glfw_library)
 
     # Create python equivalents of glfw functions
-    funcs = {
-        _camelToSnake(d.replace('glfw', '')): getattr(_glfw, d)
-        for d in dir(_glfw)
-        if hasattr(getattr(_glfw, d), '__call__')
-    }
+    funcs = {}
+    camelCase = {}
+    for d in dir(_glfw):
+        if d.startswith('_'):
+            continue
+        func_name = _camelToSnake(d.replace('glfw', ''))
+        try:
+            func = getattr(_glfw, d)  # TODO: why doesn't this work on ubuntu?
+        except AttributeError:
+            continue
+        if hasattr(func, '__call__'):
+            funcs[func_name] = func
+            camelCase[d] = func
+    # TODO: This elegance should not die...
+    # funcs = {
+    #     _camelToSnake(d.replace('glfw', '')): getattr(_glfw, d)
+    #     for d in dir(_glfw)
+    #     if not d.startswith('_')
+    #     if hasattr(getattr(_glfw, d), '__call__')
+    # }
 
     # Auto-wrap functions to make the friendly to Python
     for line in source.split('\n'):
@@ -316,11 +349,17 @@ def _initialize_module(ffi):
         if func_decl:
             snake_name = func_decl['snake_name']
             if snake_name in funcs:
-                funcs[snake_name] = _wrap_func(ffi, func_decl, funcs[snake_name])
+                some_func = funcs[snake_name]
+                funcs[snake_name] = _wrap_func(ffi, func_decl, some_func)
             else:
-                func = getattr(_glfw, func_decl['func_name'], None)
+                decl_func_name = func_decl['func_name']
+                try:
+                    func = getattr(_glfw, decl_func_name, None)
+                except AttributeError:
+                    continue
                 if func:
                     funcs[snake_name] = _wrap_func(ffi, func_decl, func)
+                    camelCase[decl_func_name] = func
 
     # Add functions to module
     globals().update(funcs)
@@ -337,10 +376,14 @@ def _initialize_module(ffi):
 
     # And finally keep the API the same for those that want to copy and
     #  paste from online C examples;  this is a straight pass-through
-    camelCase = {
-        d: getattr(_glfw, d)
-        for d in dir(_glfw)
-    }
+    camelCase = {}
+
+
+    # TODO: Make this work
+    # camelCase = {
+    #     d: getattr(_glfw, d)
+    #     for d in dir(_glfw)
+    # }
 
     # Segregate python from cffi
     core = imp.new_module('core')
@@ -375,7 +418,6 @@ def _initialize_module(ffi):
 
     # Add decorators module.  Note the lack of wrapping
     globals()['decorators'] = decorators
-
     return ffi, _glfw
 
 # Cleanup namespace
@@ -423,3 +465,37 @@ def set_error_callback(func):
     global _error_callback_wrapper
     _error_callback_wrapper = wrapper
     _glfw.glfwSetErrorCallback(wrapper)
+
+
+###############################################################################
+# Special helper functions
+###############################################################################
+def get_key_string(key):
+    '''Returns the name of a key'''
+    val = 'KEY_'
+    globs = dict(globals().items())
+    lookup = {v: k.replace(val, '').lower() for k, v in globs.items() if k.startswith(val)}
+    string = lookup.get(key, key)
+    return string
+
+
+def get_mod_string(mods):
+    '''Returns the name of a modifier'''
+    val = 'MOD_'
+    lookup = {v: k.replace(val, '').lower() for k, v in globals().items() if k.startswith(val)}
+    string = '+'.join(sorted({v for m, v in lookup.items() if m & mods}))
+    return string
+
+
+def get_mouse_button_string(button):
+    '''Returns the name of a modifier'''
+    val = 'MOUSE_BUTTON_'
+    lookup = {v: k.replace(val, '').lower() for k, v in sorted(globals().items()) if k.startswith(val)}
+    string = lookup.get(button, button)
+    return string
+
+
+def get_action_string(action):
+    '''Returns the name of a modifier'''
+    options = ['RELEASE', 'PRESS', 'REPEAT']
+    return {v: k.lower() for k, v in globals().items() if k in options}.get(action, action)
