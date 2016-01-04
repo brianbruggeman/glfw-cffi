@@ -322,11 +322,26 @@ def _initialize_module(ffi):
     _glfw = ffi.dlopen(glfw_library)
 
     # Create python equivalents of glfw functions
-    funcs = {
-        _camelToSnake(d.replace('glfw', '')): getattr(_glfw, d)
-        for d in dir(_glfw)
-        if hasattr(getattr(_glfw, d), '__call__')
-    }
+    funcs = {}
+    camelCase = {}
+    for d in dir(_glfw):
+        if d.startswith('_'):
+            continue
+        func_name = _camelToSnake(d.replace('glfw', ''))
+        try:
+            func = getattr(_glfw, d)  # TODO: why doesn't this work on ubuntu?
+        except AttributeError:
+            continue
+        if hasattr(func, '__call__'):
+            funcs[func_name] = func
+            camelCase[d] = func
+    # TODO: This elegance should not die...
+    # funcs = {
+    #     _camelToSnake(d.replace('glfw', '')): getattr(_glfw, d)
+    #     for d in dir(_glfw)
+    #     if not d.startswith('_')
+    #     if hasattr(getattr(_glfw, d), '__call__')
+    # }
 
     # Auto-wrap functions to make the friendly to Python
     for line in source.split('\n'):
@@ -334,18 +349,17 @@ def _initialize_module(ffi):
         if func_decl:
             snake_name = func_decl['snake_name']
             if snake_name in funcs:
-                try:
-                    some_func = funcs[snake_name]
-                    funcs[snake_name] = _wrap_func(ffi, func_decl, some_func)
-                except Exception as e:
-                    import traceback as tb;
-                    print(tb.format_exc(e))
-                    import pdb; pdb.set_trace()
-                    pass
+                some_func = funcs[snake_name]
+                funcs[snake_name] = _wrap_func(ffi, func_decl, some_func)
             else:
-                func = getattr(_glfw, func_decl['func_name'], None)
+                decl_func_name = func_decl['func_name']
+                try:
+                    func = getattr(_glfw, decl_func_name, None)
+                except AttributeError:
+                    continue
                 if func:
                     funcs[snake_name] = _wrap_func(ffi, func_decl, func)
+                    camelCase[decl_func_name] = func
 
     # Add functions to module
     globals().update(funcs)
@@ -362,10 +376,14 @@ def _initialize_module(ffi):
 
     # And finally keep the API the same for those that want to copy and
     #  paste from online C examples;  this is a straight pass-through
-    camelCase = {
-        d: getattr(_glfw, d)
-        for d in dir(_glfw)
-    }
+    camelCase = {}
+
+
+    # TODO: Make this work
+    # camelCase = {
+    #     d: getattr(_glfw, d)
+    #     for d in dir(_glfw)
+    # }
 
     # Segregate python from cffi
     core = imp.new_module('core')
