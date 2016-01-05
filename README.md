@@ -1,5 +1,7 @@
-GLFW-CFFI [![Build Status](https://travis-ci.org/brianbruggeman/glfw-cffi.svg)](https://travis-ci.org/brianbruggeman/glfw-cffi)
+GLFW-CFFI
 ---------
+[![Build Status](https://travis-ci.org/brianbruggeman/glfw-cffi.svg)](https://travis-ci.org/brianbruggeman/glfw-cffi)
+[![PyPI version](https://badge.fury.io/py/glfw-cffi.svg)](https://pypi.python.org/pypi/glfw-cffi)
 
 A wrapper for GLFW3 using Python's CFFI.
 
@@ -45,65 +47,244 @@ chosen and additionally follow these criteria:
 
 ## Installation:
 
-   python setup.py install
+GLFW-CFFI uses GLFW3 and attempts to find the header file associated with your
+specific library version to autogenerate the FFI interface.  So a version of
+GLFW3 must be available during installation.  If a development version is
+unavailable, then a version of the `glfw3.h` is included within the `glfw-cffi`
+package itself.
 
-## Requirements:
+### Installing via pip
 
-This install requires that glfw3 be installed.
+Install via `pip install glfw-cffi`.
+
+### Installing GLFW3
+
+GLFW3 is available for several different platforms:
+
+- Ubuntu/Debian: `sudo apt-get install -y libglfw3-dev`
+- Fedora/Red Hat: `sudo yum install -y libglfw3-dev`
+- Mac OS X with Homebrew: `brew install glfw3`
+- Windows: There is an installer available
+  [64-bit Windows](https://github.com/glfw/glfw/releases/download/3.1.2/glfw-3.1.2.bin.WIN64.zip) or
+  [32-bit Windows](https://github.com/glfw/glfw/releases/download/3.1.2/glfw-3.1.2.bin.WIN32.zip)
+
+GLFW3 is relatively new, so some older installations of Linux may not have
+`libglfw` directly available.  You may check out the [travis.yml](https://github.com/brianbruggeman/glfw-cffi/blob/master/.travis.yml#L34-L52)
+file within our github repo for more information on setup on older systems.
 
 ## Usage:
 
-Please note that the convention for Python is to use snake_case and not
-to duplicate API references (e.g. GLFW_<SOME_DEFINE> or glfwSomeCamelCaseFunction).  Instead, where you may have used:
+### Sample Usage:
 
-       #define GLFW_REFRESH_RATE
+This is the required code to produce a window on the screen:
 
-You may now use in Python:
+    import glfw
 
-       import glfw
-       ...
-       glfw.REFRESH_RATE
+    # Initialize glfw
+    if not glfw.init():
+        glfw.terminate()  # Cleans up if necessary
+        raise RuntimeError('Could not initialize GLFW3')
 
-Where you may have used:
+    # Create window and set OpenGL Context
+    win = glfw.create_window(title='Simple Window', width=640, height=480)
+    glfw.make_context_current(win)
 
-       glfwInit();
+    # Main Loop
+    while not glfw.window_should_close(win):
+        glfw.swap_buffers(win)
+        # To handle/process events use:
+        glfw.poll_events()  # for continuous rendering (like in games)
+        # or use:
+        # glfw.wait_events()  # for on-event UIs (like an editing tool)
 
-In Python, you can use:
+    # Proper shutdown
+    glfw.terminate()
 
-       import glfw
-       ...
-       glfw.init()
+A more complex window example can be found within the examples folder on the github repo.
 
-Additionally, I have added keywords based on the header information.
-For example, a simple program to open a window might look like:
+### Decorators
 
-       import glfw
-       ...
-       win = glfw.create_window(width=640, height=480, title='Hello, World!')
+Extra decorators have been added to aid with developing a full user interface, including:
 
-I have added the function signatures from the header code into the
-docstrings for the functions.  This should provide at least some help
-when trying to write a program for the first time using this library.
+- keyboard handling
+- mouse handling
+- joystick handling
+- window events
+- text events
+- path drop callbacks  (for drag and drop)
+- error callbacks
 
-If you happen to feel like you miss the old style found directly within
-the c-code, you may use them as follows.  This should help with porting
-old code directly into cffi or following the numerous examples within
-the GLFW docs:
+Each decorator may be used with a standalone function or decorating a class method.
+Examples of each type are found in the subsections below.  When decorating a class
+method, use: @[staticmethod](https://docs.python.org/2/library/functions.html#staticmethod).
 
-        from glfw.core import *
+What follows is only the more commonly used.  Better documentation on callbacks can
+be found on the [glfw website](http://www.glfw.org/docs/latest/).
 
-        glfwInit()
-        glfwCreateWindow(640, 480, 'Hello, World!')
-        ...
-        glfwTerminate()
+#### Handling keyboard events
+
+Keyboard events have a single decorator:
+
+- keyboard event:  glfw.decorators.key_callback
+
+
+    import glfw
+
+    ...
+
+    @glfw.decorators.key_callback
+    def on_key(win, key, code, action, mods):
+        '''Converts key into an event'''
+        if key in [glfw.KEY_ESCAPE] and action in [glfw.PRESS]:
+            glfw.set_window_should_close(win, gl.GL_TRUE)
+
+In addition, helper functions have been added to convert data into strings:
+
+    def display_data(key, action, mods):
+        '''Converts keystroke into string data'''
+        # Convert data
+        key_action = glfw.get_key_string(key)
+        action_string = glfw.get_action_string(action)
+        mods_string = glfw.get_mod_string(mods)
+        # Display data
+        print('key: {key} -> "{string}"'.format(key=key, string=key_string))
+        print('action: {action} -> "{string}"'.format(action=action, string=action_string))
+        print('mods: {mods} -> "{string}"'.format(mods=mods, string=mods_string))
+
+Finally, sometimes keystroke handling may make sense to be included within a class.
+
+    import glfw
+    from OpenGL import GL as gl
+
+    ...
+
+    class Foo(object):
+
+        @staticmethod
+        @glfw.decorators.key_callback
+        def on_key(win, key, code, action, mods):
+            '''Handles a key event'''
+            if key in [glfw.KEY_ESCAPE] and action in [glfw.PRESS]:
+                glfw.set_window_should_close(win, gl.GL_TRUE)
+            # Display what just happened
+            key = glfw.get_key_string(key)
+            amapping = {'press': '+', 'release': '-', 'repeat': '*'}
+            action = amapping.get(glfw.get_action_string(action))
+            mods = glfw.get_mod_string(mods)
+            string = '{}|{}'.format(action[0], '+'.join(str(_) for _ in (mods, key) if _))
+            print(string)
+
+
+#### Handling mouse events
+
+Mouse events have three decorators:
+
+- mouse button click:  glfw.decorators.mouse_button_callback
+- mouse wheel/scroll: glfw.decorators.scroll_callback
+- mouse movement: glfw.decorators.cursor_pos_callback
+
+
+    import glfw
+
+    from OpenGL import GL as gl
+
+    ...
+
+    class Foo(object):
+
+        @staticmethod
+        @glfw.decorators.mouse_button_callback
+        def on_mouse_button(win, button, action, mods):
+            '''Handles a mouse button event'''
+            # Not used here, but having the position where the mouse was at the
+            #  time of the click can be useful.
+            position = glfw.get_cursor_pos(win)
+            # Handle button
+            if button in [glfw.MOUSE_BUTTON_1] and action in [glfw.PRESS]:
+                glfw.set_window_should_close(win, gl.GL_TRUE)
+            # Display what just happened
+            button = glfw.get_mouse_button_string(button)
+            amapping = {'press': '+', 'release': '-', 'repeat': '*'}
+            action = amapping.get(glfw.get_action_string(action))
+            mods = glfw.get_mod_string(mods)
+            position = '({:>.0f}, {:>.0f})'.format(*position)
+            string = '{} {}|{}'.format(position, action[0], '+'.join(str(_) for _ in (mods, button) if _))
+            print(string)
+
+        @staticmethod
+        @glfw.decorators.scroll_callback
+        def on_mouse_scroll(win, x_offset, y_offset):
+            '''Handles a mouse scroll/wheel event'''
+
+        @staticmethod
+        @glfw.decorators.cursor_pos_callback
+        def on_mouse_move(win, x_offset, y_offset):
+            '''Handles a mouse move event'''
+
+
+
+#### Handling window events
+
+There are other available decorators that handle window events.
+
+##### Gaining and Losing Focus
+
+Windows client areas may gain or lose focus and an event is
+triggered each time.
+
+- focus: glfw.decorators.cursor_enter_callback
+
+    import glfw
+
+    class Foo(object):
+
+        @staticmethod
+        @glfw.decorators.cursor_enter_callback
+        def on_enter(win, status):
+          '''Handles focus event
+
+          status is a boolean:  True for focused and False for unfocused
+          '''
+
+##### Resizing
+
+Windows may be resized.
+
+- resize: glfw.decorators.
+
+    import glfw
+
+    class Foo(object):
+
+        @staticmethod
+        @glfw.decorators.cursor_enter_callback
+        def on_enter(win, status):
+          '''Handles focus event
+
+          status is a boolean:  True for focused and False for unfocused
+          '''
+
 
 ## Examples:
 
 More examples can be within the github repo under the [examples/](https://github.com/brianbruggeman/glfw-cffi/tree/develop/examples) folder.
 
+Some of the examples require more packages to be installed:
+
+- [docopt](https://pypi.python.org/pypi/docopt):  Creates beautiful command-line interfaces
+- [numpy](https://pypi.python.org/pypi/numpy):  is a general-purpose array-processing package designed to efficiently manipulate large multi-dimensional arrays of arbitrary records without sacrificing too much speed for small multi-dimensional arrays
+- [freetype-py](https://pypi.python.org/pypi/freetype-py/): Freetype python provides bindings for the FreeType library. Only the high-level API is bound.
+
 
 ## Contributions:
 
-I welcome pull requests for patches, but I have limited time so I may
-be slow in responding immediately.
+Contributions are welcome. When opening a PR, please keep the following guidelines in mind:
 
+Before implementing, please open an issue for discussion.
+Make sure you have tests for the new logic.
+Make sure your code passes flake8
+Add yourself to contributors at README.md unless you are already there. In that case tweak your contributions.
+
+## Contributors
+
+* [Brian Bruggeman](https://github.com/brianbruggeman) - Originator

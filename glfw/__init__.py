@@ -60,6 +60,7 @@ __shortdesc__ = 'Foreign Function Interface wrapper for GLFW v3.x'
 
 ###############################################################################
 def _get_function_declaration(line):
+    '''Reads a line of C code and then extracts function declarations if found'''
     found = None
     pattern = ''.join((
         r'^\s*(?P<result>(.*))\s+',
@@ -132,10 +133,10 @@ def _wrap_func(ffi, func_decl, func):
     func_res = func_type.result
     decl_args = func_decl['args']
     func_fields = []
-    fields = set()
     for ctype, arg in zip(func_args, decl_args.split(',')):
         arg = arg.replace(ctype.cname, '').replace(ctype.cname.replace(' ', ''), '')
         arg = arg.strip()
+        arg = arg.split(' ')[-1]  # to capture the field name without the type data
         func_fields.append((arg, ctype))
     fields = dict(func_fields)
 
@@ -153,17 +154,24 @@ def _wrap_func(ffi, func_decl, func):
                 func_kwds[fname] = arg
             for kwd, val in kwds.items():
                 if kwd in fields:
-                    fname, ftype = fields[kwd]
+                    try:
+                        fname, ftype = fields[kwd]
+                    except TypeError:
+                        fname = kwd
+                        ftype = fields[kwd]
                     if not isinstance(val, ffi.CData) and ftype.kind not in ['primitive']:
-                        farg = ffi.new(ftype.cname)
-                        farg[0] = val
+                        if ftype.cname == 'char *':
+                            farg = ffi.new('char[]', val)
+                        else:
+                            farg = ffi.new(ftype.cname)
+                            farg[0] = val
                         val = farg
                     func_kwds[fname] = val
             for name, ftype in func_fields:
                 val = func_kwds.get(name)
                 if val is None:
                     if ftype.kind == 'pointer':
-                        val = ffi.new(ftype.cname)
+                        val = ffi.new(ftype.cname, val)
                         func_kwds[name] = val
                         retval.append(val)
                     else:
@@ -223,17 +231,19 @@ def _wrap_func(ffi, func_decl, func):
 
     docstring = func.__doc__
     if not docstring:
+        docstring = '"{snake_name}" is a wrapped function from the glfw c-library.\n'
+        docstring += 'The c-function declaration can be found below:\n\n'
         if func_args:
             if func_res.kind != 'void':
-                docstring = '{result} {snake_name}({args})'.format(**func_decl)
+                docstring += '    {result} {func_name}({args})\n'
             else:
-                docstring = '{snake_name}({args})'.format(**func_decl)
+                docstring += '    void {func_name}({args})\n'
         else:
             if func_res.kind != 'void':
-                docstring = '{result} {snake_name}()'.format(**func_decl)
+                docstring += '    {result} {func_name}(void)\n'
             else:
-                docstring = '{snake_name}()'.format(**func_decl)
-    new_func.__doc__ = docstring
+                docstring += '    void {func_name}(void)\n'
+    new_func.__doc__ = docstring.format(**func_decl)
     # wrapper.__name__ = func_decl['snake_name']
 
     return new_func
@@ -244,18 +254,6 @@ def _camelToSnake(string):
     pass01 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', string)
     final = re.sub('([a-z0-9])([A-Z])', r'\1_\2', pass01).lower()
     return final
-
-
-def get_include():
-    '''Returns header_path found during initialization'''
-    global header_path
-    include_path = header_path
-    if include_path is not None:
-        while include_path not in ['/', '']:
-            if include_path.split(os.path.sep)[-1] == 'include':
-                break
-            include_path = os.path.dirname(include_path)
-    return include_path
 
 
 # Modifies the module directly by introspection and loading up glfw
@@ -378,7 +376,6 @@ def _initialize_module(ffi):
     #  paste from online C examples;  this is a straight pass-through
     camelCase = {}
 
-
     # TODO: Make this work
     # camelCase = {
     #     d: getattr(_glfw, d)
@@ -398,21 +395,29 @@ def _initialize_module(ffi):
     sys.modules['{}.decorators'.format(modname)] = decorators
     decorators.__dict__.update(
         dict(
-            char_callback=ffi.callback('void (GLFWwindow*, unsigned int)'),
-            cursor_enter_callback=ffi.callback('void (GLFWwindow*, int)'),
-            cursor_pos_callback=ffi.callback('void (GLFWwindow*, double, double)'),
+            # Error callback
             error_callback=ffi.callback('void (int, const char*)'),
-            frame_buffersize_callback=ffi.callback('void (GLFWwindow*, int, int)'),
-            key_callback=ffi.callback('void (GLFWwindow*, int, int, int, int)'),
-            monitor_callback=ffi.callback('void (GLFWmonitor*, int)'),
-            mouse_button_callback=ffi.callback('void (GLFWwindow*, int, int, int)'),
+            # Text Input
+            char_callback=ffi.callback('void (GLFWwindow*, unsigned int)'),
+            char_mods_callback=ffi.callback('void (GLFWwindow*, unsigned int, int)'),
+            # Mouse Input
+            cursor_pos_callback=ffi.callback('void (GLFWwindow*, double, double)'),
             scroll_callback=ffi.callback('void (GLFWwindow*, double, double)'),
+            mouse_button_callback=ffi.callback('void (GLFWwindow*, int, int, int)'),
+            # Keyboard Input
+            key_callback=ffi.callback('void (GLFWwindow*, int, int, int, int)'),
+            # Window Callbacks
+            cursor_enter_callback=ffi.callback('void (GLFWwindow*, int)'),
+            framebuffer_size_callback=ffi.callback('void (GLFWwindow*, int, int)'),
             window_close_callback=ffi.callback('void (GLFWwindow*)'),
             window_focus_callback=ffi.callback('void (GLFWwindow*, int)'),
             window_iconify_callback=ffi.callback('void (GLFWwindow*, int)'),
             window_pos_callback=ffi.callback('void (GLFWwindow*, int, int)'),
             window_refresh_callback=ffi.callback('void (GLFWwindow*)'),
             window_size_callback=ffi.callback('void (GLFWwindow*, int, int)'),
+            # Misc Callbacks
+            drop_callback=ffi.callback('void (GLFWwindow* window, int, const char**)'),
+            monitor_callback=ffi.callback('void (GLFWmonitor*, int)'),
         )
     )
 
@@ -432,11 +437,22 @@ globals().pop('func')
 
 
 ###############################################################################
-# Hand written functions
+# Hand written GLFW-CFFI API
 ###############################################################################
-def create_window(width=640, height=480, title="Untitled", monitor=None, context=None):
-    '''Creates a window
+def get_include():
+    '''Returns header_path found during initialization'''
+    global header_path
+    include_path = header_path
+    if include_path is not None:
+        while include_path not in ['/', '']:
+            if include_path.split(os.path.sep)[-1] == 'include':
+                break
+            include_path = os.path.dirname(include_path)
+    return include_path
 
+
+def create_window(width=640, height=480, title="Untitled", monitor=None, share=None):
+    '''Creates a window
     Context is used when state from one window needs to be transferred
     to the new window.  A GlfwWindow * can be used for context.
     This is common when switching between full-screen and windowed
@@ -445,12 +461,11 @@ def create_window(width=640, height=480, title="Untitled", monitor=None, context
     '''
     if monitor is None:
         monitor = _ffi.NULL
-    if context is None:
-        context = _ffi.NULL
-    args = (width, height, title, monitor, context)
+    if share is None:
+        share = _ffi.NULL
+    args = (width, height, title, monitor, share)
     win = _glfw.glfwCreateWindow(*args)
     return win
-
 
 ###############################################################################
 # Special error handler callback
@@ -459,6 +474,9 @@ _error_callback_wrapper = None
 
 
 def set_error_callback(func):
+    '''Wraps the error callback function for GLFW and sets the callback function
+    for the entire program'''
+
     @decorators.error_callback
     def wrapper(error, description):
         return func(error, _ffi.string(description))

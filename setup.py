@@ -38,6 +38,13 @@ with open('{}/__init__.py'.format(top_folder), 'r') as fd:
                 value = value.rstrip("'")
             data[key] = value
 
+try:
+    import pypandoc
+    long_description = pypandoc.convert('README.md', 'rst')
+except ImportError:
+    with open('README.md', 'r') as fd:
+        long_description = fd.read()
+
 
 setup(
     name=data.get('title'),
@@ -45,6 +52,7 @@ setup(
     author=data.get('author'),
     author_email=data.get('email'),
     description=data.get('shortdesc'),
+    long_description=long_description,
     license=data.get('license'),
     url=data.get('url'),
     keywords='GLFW, CFFI',
