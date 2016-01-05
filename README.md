@@ -1,5 +1,7 @@
-GLFW-CFFI [![Build Status](https://travis-ci.org/brianbruggeman/glfw-cffi.svg)](https://travis-ci.org/brianbruggeman/glfw-cffi)
+GLFW-CFFI
 ---------
+[![Build Status](https://travis-ci.org/brianbruggeman/glfw-cffi.svg)](https://travis-ci.org/brianbruggeman/glfw-cffi)
+[![PyPI version](https://badge.fury.io/py/glfw-cffi.svg)](https://pypi.python.org/pypi/glfw-cffi)
 
 A wrapper for GLFW3 using Python's CFFI.
 
@@ -45,11 +47,26 @@ chosen and additionally follow these criteria:
 
 ## Installation:
 
-   python setup.py install
+GLFW-CFFI uses GLFW3 and attempts to find the header file associated with your
+specific library version to autogenerate the FFI interface.  So a version of
+GLFW3 must be available during installation.  If a development version is
+unavailable, then a version of the `glfw3.h` is included within the `glfw-cffi`
+package itself.
 
-## Requirements:
+### Installing via pip
 
-This install requires that glfw3 be installed.
+Install via `pip install glfw-cffi`.
+
+### Installing GLFW3
+
+GLFW3 is available for several different platforms:
+
+- Ubuntu/Debian: `sudo apt-get install -y libglfw3-dev`
+- Fedora/Red Hat: `sudo yum install -y libglfw3-dev`
+- Mac OS X with Homebrew: `brew install glfw3`
+- Windows: There is an installer available
+  [64-bit Windows](https://github.com/glfw/glfw/releases/download/3.1.2/glfw-3.1.2.bin.WIN64.zip) or
+  [32-bit Windows](https://github.com/glfw/glfw/releases/download/3.1.2/glfw-3.1.2.bin.WIN32.zip)
 
 ## Usage:
 
