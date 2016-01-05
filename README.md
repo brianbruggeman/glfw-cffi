@@ -127,10 +127,9 @@ Keyboard events have a single decorator:
 
 - keyboard event:  glfw.decorators.key_callback
 
+Example:
 
     import glfw
-
-    ...
 
     @glfw.decorators.key_callback
     def on_key(win, key, code, action, mods):
@@ -138,7 +137,9 @@ Keyboard events have a single decorator:
         if key in [glfw.KEY_ESCAPE] and action in [glfw.PRESS]:
             glfw.set_window_should_close(win, gl.GL_TRUE)
 
+
 In addition, helper functions have been added to convert data into strings:
+
 
     def display_data(key, action, mods):
         '''Converts keystroke into string data'''
@@ -151,12 +152,12 @@ In addition, helper functions have been added to convert data into strings:
         print('action: {action} -> "{string}"'.format(action=action, string=action_string))
         print('mods: {mods} -> "{string}"'.format(mods=mods, string=mods_string))
 
+
 Finally, sometimes keystroke handling may make sense to be included within a class.
+
 
     import glfw
     from OpenGL import GL as gl
-
-    ...
 
     class Foo(object):
 
@@ -183,12 +184,11 @@ Mouse events have three decorators:
 - mouse wheel/scroll: glfw.decorators.scroll_callback
 - mouse movement: glfw.decorators.cursor_pos_callback
 
+Example:
 
     import glfw
-
     from OpenGL import GL as gl
 
-    ...
 
     class Foo(object):
 
@@ -232,16 +232,28 @@ There are other available decorators that handle window events.
 Windows client areas may gain or lose focus and an event is
 triggered each time.
 
-- focus: glfw.decorators.cursor_enter_callback
+- client focus: glfw.decorators.cursor_enter_callback
+- window focus: glfw.decorators.window_focus_callback
+
+Example:
 
     import glfw
+
 
     class Foo(object):
 
         @staticmethod
         @glfw.decorators.cursor_enter_callback
         def on_enter(win, status):
-          '''Handles focus event
+          '''Handles focus event for a window client area
+
+          status is a boolean:  True for focused and False for unfocused
+          '''
+
+        @staticmethod
+        @glfw.decorators.window_focus_callback
+        def on_enter(win, status):
+          '''Handles focus event for a window
 
           status is a boolean:  True for focused and False for unfocused
           '''
@@ -250,19 +262,19 @@ triggered each time.
 
 Windows may be resized.
 
-- resize: glfw.decorators.
+- resize: glfw.decorators.window_size_callback
+
+Example:
 
     import glfw
+
 
     class Foo(object):
 
         @staticmethod
-        @glfw.decorators.cursor_enter_callback
-        def on_enter(win, status):
-          '''Handles focus event
-
-          status is a boolean:  True for focused and False for unfocused
-          '''
+        @glfw.decorators.window_size_callback
+        def on_enter(win, width, height):
+          '''Handles resize event'''
 
 
 ## Examples:
@@ -280,10 +292,10 @@ Some of the examples require more packages to be installed:
 
 Contributions are welcome. When opening a PR, please keep the following guidelines in mind:
 
-Before implementing, please open an issue for discussion.
-Make sure you have tests for the new logic.
-Make sure your code passes flake8
-Add yourself to contributors at README.md unless you are already there. In that case tweak your contributions.
+- Before implementing, please open an issue for discussion.
+- Make sure you have tests for the new logic.
+- Make sure your code passes `flake8`
+- Add yourself to contributors at `README.md` and/or  your contributions.
 
 ## Contributors
 
