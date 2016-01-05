@@ -68,6 +68,10 @@ GLFW3 is available for several different platforms:
   [64-bit Windows](https://github.com/glfw/glfw/releases/download/3.1.2/glfw-3.1.2.bin.WIN64.zip) or
   [32-bit Windows](https://github.com/glfw/glfw/releases/download/3.1.2/glfw-3.1.2.bin.WIN32.zip)
 
+GLFW3 is relatively new, so some older installations of Linux may not have
+`libglfw` directly available.  You may check out the [travis.yml](https://github.com/brianbruggeman/glfw-cffi/blob/master/.travis.yml#L34-L52)
+file within our github repo for more information on setup on older systems.
+
 ## Usage:
 
 Please note that the convention for Python is to use snake_case and not
@@ -118,9 +122,21 @@ the GLFW docs:
 
 More examples can be within the github repo under the [examples/](https://github.com/brianbruggeman/glfw-cffi/tree/develop/examples) folder.
 
+Some of the examples require more packages to be installed:
+
+- [docopt](https://pypi.python.org/pypi/docopt):  Creates beautiful command-line interfaces
+- [numpy](https://pypi.python.org/pypi/numpy):  is a general-purpose array-processing package designed to efficiently manipulate large multi-dimensional arrays of arbitrary records without sacrificing too much speed for small multi-dimensional arrays
+
 
 ## Contributions:
 
-I welcome pull requests for patches, but I have limited time so I may
-be slow in responding immediately.
+Contributions are welcome. When opening a PR, please keep the following guidelines in mind:
 
+Before implementing, please open an issue for discussion.
+Make sure you have tests for the new logic.
+Make sure your code passes flake8
+Add yourself to contributors at README.md unless you are already there. In that case tweak your contributions.
+
+## Contributors
+
+* [Brian Bruggeman](https://github.com/brianbruggeman) - Originator
