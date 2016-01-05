@@ -20,17 +20,20 @@ from textwrap import dedent as dd
 
 import numpy as np
 import freetype as ft
+import OpenGL
+OpenGL.ERROR_CHECKING = False
 import glfw
 import OpenGL.GL as gl
 
 
-def on_display(data, texid, base):
+def on_display(data, height, texid, base):
     gl.glClearColor(0, 0, 0, 1)
     gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
     gl.glBindTexture(gl.GL_TEXTURE_2D, texid)
     gl.glColor(1, 1, 1, 1)
     gl.glPushMatrix()
-    gl.glTranslate(10, 100, 0)
+    padding = 5
+    gl.glTranslate(padding, height-padding, 0)
     gl.glPushMatrix()
     gl.glListBase(base+1)
     gl.glCallLists(data)
@@ -40,6 +43,13 @@ def on_display(data, texid, base):
 
 @glfw.decorators.window_size_callback
 def on_resize(win, width, height):
+    fb_width, fb_height = glfw.get_framebuffer_size(win)
+    gl.glViewport(0, 0, fb_width, fb_height)
+    gl.glLoadIdentity()
+
+
+@glfw.decorators.framebuffer_size_callback
+def on_framebuffer_resize(win, width, height):
     gl.glViewport(0, 0, width, height)
     gl.glLoadIdentity()
 
@@ -134,7 +144,11 @@ def main(**options):
     glfw.set_key_callback(win, on_key)
     glfw.set_mouse_button_callback(win, on_mouse_button)
     glfw.set_window_size_callback(win, on_resize)
+    glfw.set_framebuffer_size_callback(win, on_framebuffer_resize)
     glfw.make_context_current(win)
+
+    # determine max framebuffer size
+    fb_width, fb_height = glfw.get_framebuffer_size(win)
 
     # Setup for font
     gl.glTexEnvf(gl.GL_TEXTURE_ENV, gl.GL_TEXTURE_ENV_MODE, gl.GL_MODULATE)
@@ -147,10 +161,10 @@ def main(**options):
     texid = make_font(font, font_size, texid, base)
 
     # Run the resize code to setup the display
-    gl.glViewport(0, 0, width, height)
+    gl.glViewport(0, 0, fb_width, fb_height)
     gl.glMatrixMode(gl.GL_PROJECTION)
     gl.glLoadIdentity()
-    gl.glOrtho(0, width, 0, height, -1, 1)
+    gl.glOrtho(0, fb_width, 0, fb_height, -1, 1)
     gl.glMatrixMode(gl.GL_MODELVIEW)
     gl.glLoadIdentity()
 
@@ -163,9 +177,10 @@ def main(**options):
     data = [ord(c) for c in text]
 
     while not glfw.window_should_close(win):
-        gl.glViewport(0, 0, width, height)
+        fb_width, fb_height = glfw.get_framebuffer_size(win)
+        gl.glViewport(0, 0, fb_width, fb_height)
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
-        on_display(data, texid, base)
+        on_display(data, height, texid, base)
         glfw.swap_buffers(win)
         glfw.poll_events()
 

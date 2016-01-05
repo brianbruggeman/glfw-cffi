@@ -34,6 +34,7 @@ additionally follow these three criteria:
 '''
 from ctypes.util import find_library as _find_library
 import fnmatch
+import functools
 import imp
 import os
 import re
@@ -59,6 +60,15 @@ __shortdesc__ = 'Foreign Function Interface wrapper for GLFW v3.x'
 
 
 ###############################################################################
+def _display(object):
+    '''Purely for debugging'''
+    for d in dir(object):
+        try:
+            print('{}: {}'.format(d, getattr(object, d)))
+        except TypeError:
+            print('{}: type error'.format(d))
+
+
 def _get_function_declaration(line):
     '''Reads a line of C code and then extracts function declarations if found'''
     found = None
@@ -141,6 +151,7 @@ def _wrap_func(ffi, func_decl, func):
     fields = dict(func_fields)
 
     # Auto-wrapper for cffi function call
+    @functools.wraps(func)
     def wrapper(*args, **kwds):
         retval = []
         if func_args:
@@ -199,12 +210,7 @@ def _wrap_func(ffi, func_decl, func):
         function, code = type(func), type(code_object)
         co_code = code_object.co_code
         co_lnotab = code_object.co_lnotab
-        if sys.version.startswith('3'):
-            # co_code = int.from_bytes(co_code, byteorder=sys.byteorder)
-            # print('co_code: {}'.format(co_code))
-            co_lnotab = int.from_bytes(co_lnotab, byteorder=sys.byteorder)
-            print('co_lnotab: {}'.format(co_lnotab))
-        code_objects = (
+        code_objects = [
             code_object.co_argcount,
             code_object.co_nlocals,
             code_object.co_stacksize,
@@ -219,7 +225,13 @@ def _wrap_func(ffi, func_decl, func):
             co_lnotab,
             code_object.co_freevars,
             code_object.co_cellvars
-        )
+        ]
+        if sys.version.startswith('3'):
+            code_objects.insert(1, code_object.co_kwonlyargcount)
+        # TODO: modify code *args, **kwds to use actual variables
+        # varnames = tuple(f[0] for f in func_fields)
+        # argcount = len(varnames)
+        # _display(code_object)
         new_func = function(
             code(*code_objects),
             func.__globals__, new_name, func.__defaults__, func.__closure__
@@ -244,7 +256,6 @@ def _wrap_func(ffi, func_decl, func):
             else:
                 docstring += '    void {func_name}(void)\n'
     new_func.__doc__ = docstring.format(**func_decl)
-    # wrapper.__name__ = func_decl['snake_name']
 
     return new_func
 
@@ -463,6 +474,9 @@ def create_window(width=640, height=480, title="Untitled", monitor=None, share=N
         monitor = _ffi.NULL
     if share is None:
         share = _ffi.NULL
+    if sys.version.startswith('3'):
+        farg = _ffi.new('char []', bytes(title.encode('utf-8')))
+        title = farg
     args = (width, height, title, monitor, share)
     win = _glfw.glfwCreateWindow(*args)
     return win
