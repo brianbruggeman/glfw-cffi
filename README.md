@@ -97,6 +97,10 @@ the GLFW docs:
         ...
         glfwTerminate()
 
+## Examples:
+
+More examples can be within the github repo under the [examples/](https://github.com/brianbruggeman/glfw-cffi/tree/develop/examples) folder.
+
 
 ## Contributions:
 
