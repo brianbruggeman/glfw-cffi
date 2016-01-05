@@ -50,6 +50,9 @@ before_script:
    # install GLFW3
    - sudo apt-get install -y libglfw3-dev
    - sudo apt-get install -y tree
+   # Install numpy for pypy compatibility
+   - sudo apt-get install -y python-numpy
+
 
 # command to run tests
 script:
