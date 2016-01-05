@@ -72,5 +72,7 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: Implementation :: PyPy'
         ],
-    requires=['cffi']
+    install_requires=[
+        'cffi', 'pyopengl', 'docopt', 'freetype-py', 'numpy'
+    ]
 )
