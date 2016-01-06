@@ -208,25 +208,24 @@ def _wrap_func(ffi, func_decl, func):
         as the function'''
         code_object = func.__code__
         function, code = type(func), type(code_object)
-        co_code = code_object.co_code
-        co_lnotab = code_object.co_lnotab
         code_objects = [
             code_object.co_argcount,
             code_object.co_nlocals,
             code_object.co_stacksize,
             code_object.co_flags,
-            co_code,
+            code_object.co_code,
             code_object.co_consts,
             code_object.co_names,
             code_object.co_varnames,
             code_object.co_filename,
             new_name,
             code_object.co_firstlineno,
-            co_lnotab,
+            code_object.co_lnotab,
             code_object.co_freevars,
             code_object.co_cellvars
         ]
         if sys.version.startswith('3'):
+            # CodeType changed between python2 and python3
             code_objects.insert(1, code_object.co_kwonlyargcount)
         # TODO: modify code *args, **kwds to use actual variables
         # varnames = tuple(f[0] for f in func_fields)
@@ -243,7 +242,7 @@ def _wrap_func(ffi, func_decl, func):
 
     docstring = func.__doc__
     if not docstring:
-        docstring = '"{snake_name}" is a wrapped function from the glfw c-library.\n'
+        docstring = '"{snake_name}" wrapps a glfw c-library function:.\n'
         docstring += 'The c-function declaration can be found below:\n\n'
         if func_args:
             if func_res.kind != 'void':
