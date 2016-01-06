@@ -11,6 +11,7 @@ Options:
     -H --height HEIGHT   Window height [default: 200]
     -W --width WIDTH     Window width [default: 300]
     -T --title TITLE     Window title [default: GLFW Text Rendering Demo]
+    -t --text FILE       Text file to use to read text data
     -f --font FONT       Font to use [default: InputMono.ttf]
     -S --font-size SIZE  Size of font to use [default: 16]
 '''
@@ -66,6 +67,7 @@ def on_mouse_button(win, button, action, mods):
 
 
 def make_font(filename, size, texid, base):
+    '''Rasterizes font to a bitmap'''
     # Load font  and check it is monotype
     face = ft.Face(filename)
     face.set_char_size(size*64)
@@ -169,18 +171,23 @@ def main(**options):
     gl.glLoadIdentity()
 
     # Setup what we'll display
-    text = '\n'.join(l for l in dd(u'''
-    Hello, World!
-    On multiple lines.
-    ''').split('\n') if l.strip())
+    text_file = options.get('text')
+    if os.path.exists(text_file):
+        with open(text_file, 'r') as fd:
+            text = fd.read()
+    else:
+        text = '\n'.join(l for l in dd(u'''
+        Hello, World!
+        On multiple lines.
+        ''').split('\n') if l.strip())
 
     data = [ord(c) for c in text]
 
     while not glfw.window_should_close(win):
-        fb_width, fb_height = glfw.get_framebuffer_size(win)
-        gl.glViewport(0, 0, fb_width, fb_height)
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
-        on_display(data, height, texid, base)
+        # Use the framebuffer height to prevent viewport issues when moving from
+        #  LoDPI to HiDPI in a multiple monitor, multiple-dpi display scenario
+        on_display(data, fb_height, texid, base)
         glfw.swap_buffers(win)
         glfw.poll_events()
 
@@ -203,5 +210,6 @@ if __name__ == '__main__':
     options['width'] = int(options.get('width'))
     options['font_size'] = int(options.get('font_size'))
     options['font'] = os.path.abspath(options.get('font'))
+    options['text'] = os.path.abspath(options.get('text')) if options.get('text') else ''
 
     main(**options)
