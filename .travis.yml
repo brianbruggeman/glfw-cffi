@@ -13,16 +13,12 @@ branches:
         - develop
 os:
   - linux
-  # - osx
-  # - windows
 matrix:
   allow_failures:
       # - python: "3.5"
+      - python: pypy  # Numpy installation is less than ideal
       - python: "3.5-dev"
       - python: "nightly"
-#     - os: osx
-#     # - os: linux
-#     - os: windows
 
 
 # Runs first
