@@ -50,7 +50,7 @@ modname = os.path.basename(os.path.dirname(__file__))
 
 ###############################################################################
 __title__ = 'glfw-cffi'
-__version__ = '0.1.6-dev'
+__version__ = '0.1.6'
 __author__ = 'Brian Bruggeman'
 __email__ = 'brian.m.bruggeman@gmail.com'
 __license__ = 'Apache 2.0'
