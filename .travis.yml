@@ -13,22 +13,16 @@ branches:
         - develop
 os:
   - linux
-  # - osx
-  # - windows
 matrix:
   allow_failures:
-      - python: "3.5"
+      # - python: "3.5"
+      - python: pypy  # Numpy installation is less than ideal
       - python: "3.5-dev"
       - python: "nightly"
-#     - os: osx
-#     # - os: linux
-#     - os: windows
 
 
 # Runs first
-install:
-    - pip install -r requirements.txt
-    - pip install .
+# install:
 
 # Install system dependencies
 before_script:
@@ -50,6 +44,11 @@ before_script:
    # install GLFW3
    - sudo apt-get install -y libglfw3-dev
    - sudo apt-get install -y tree
+   # Install numpy for pypy compatibility
+   - sudo apt-get install -y python-numpy
+   - pip install -r requirements.txt
+   - pip install .
+
 
 # command to run tests
 script:
