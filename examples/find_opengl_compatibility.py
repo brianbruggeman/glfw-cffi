@@ -4,7 +4,7 @@
 Script to determine opengl compatibility
 
 Usage:
-    find_opengl_compatability [options]
+    find_opengl_compatibility [options]
 
 Options:
     -h --help        This message
@@ -14,7 +14,7 @@ from OpenGL import GL as gl
 import glfw
 
 
-def get_opengl_compatability(logger, ffi):
+def get_opengl_compatibility(logger, ffi):
     if not glfw.init():
         glfw.terminate()
         raise RuntimeError('GLFW could not be initialized')
@@ -83,7 +83,7 @@ if __name__ == '__main__':
     logger = logging.getLogger('OpenGL Compatibility')
 
     # determine version and display
-    version = get_opengl_compatability(logger, FFI())
+    version = get_opengl_compatibility(logger, FFI())
     version = '.'.join('{}'.format(v) for v in version)
     logger.info('Version: {version}'.format(version=version))
 
