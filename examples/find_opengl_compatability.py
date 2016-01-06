@@ -16,6 +16,7 @@ import glfw
 
 def get_opengl_compatability(logger, ffi):
     if not glfw.init():
+        glfw.terminate()
         raise RuntimeError('GLFW could not be initialized')
     logger.debug("Determining capabilities...")
     opengl_version = None
