@@ -4,7 +4,6 @@ GLFW-CFFI
 [![PyPI version](https://img.shields.io/pypi/v/glfw-cffi.svg)](https://pypi.python.org/pypi/glfw-cffi)
 [![Python Compatibility](https://img.shields.io/pypi/pyversions/pypiserver.svg)](https://pypi.python.org/pypi/glfw-cffi)
 [![Downloads](https://img.shields.io/pypi/dm/glfw-cffi.svg?period=week)](https://pypi.python.org/pypi/glfw-cffi)
-[![Dependencies](https://img.shields.io/requires/github/brianbruggeman/glfw-cffi.svg)](https://pypi.python.org/pypi/glfw-cffi)
 
 
 A wrapper for GLFW3 using Python's CFFI.
