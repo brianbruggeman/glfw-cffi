@@ -58,3 +58,4 @@ target/
 
 # Virtual Environments
 venv*/
+.DS_Store

@@ -10,6 +10,8 @@ Options:
     -h --help        This message
     -v --verbose     Increases message output
 '''
+import OpenGL
+OpenGL.ERROR_CHECKING = True
 from OpenGL import GL as gl
 import glfw
 

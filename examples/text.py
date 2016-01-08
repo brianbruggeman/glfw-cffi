@@ -172,6 +172,7 @@ def main(**options):
     gl.blend_func(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
     gl.enable(gl.TEXTURE_2D)
     # Generate a texture atlas for the font
+    font_size = font_size * fb_width // width
     texid = make_font(font, font_size, texid, base)
 
     # Run the resize code to setup the display

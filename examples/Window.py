@@ -19,8 +19,15 @@ from __future__ import print_function
 import logging
 import threading
 
+import OpenGL
+# Turn off ERROR_CHECKING to improve OpenGL performance
+#  This must be run before glfw is imported
+OpenGL.ERROR_CHECKING = True
 import glfw
-from glfw import gl
+# GLFW comes with a replacement for OpenGL which uses OpenGL but renames
+#  the functions so they are snake_case and drops the GL_ prefix
+#  from enumerations
+import glfw.gl as gl
 
 
 log = logging.getLogger('Window')
@@ -34,11 +41,39 @@ class Window(object):
     '''
     registry = {}
 
+    @property
+    def width(self):
+        '''Window width'''
+        width, height = glfw.get_window_size(self.win)
+        return width
+
+    @property
+    def height(self):
+        '''Window height'''
+        width, height = glfw.get_window_size(self.win)
+        return height
+
+    @property
+    def fb_width(self):
+        '''Framebuffer width'''
+        fb_width, fb_height = glfw.get_framebuffer_size(self.win)
+        return fb_width
+
+    @property
+    def fb_height(self):
+        '''Framebuffer height'''
+        fb_width, fb_height = glfw.get_framebuffer_size(self.win)
+        return fb_height
+
     def __init__(self, title='GLFW Example', height=480, width=640):
         # Determine available major/minor compatibility
         #  This contains init and terminate logic for glfw, so it must be run first
         major, minor = self.get_opengl_version()
         self.title = title
+
+        # Lock is for thread aware Windows and opening, closing and garbage
+        #  collection
+        self.lock = threading.Lock()
 
         if not glfw.core.init():
             raise RuntimeError('Could not initialize glfw')
@@ -53,17 +88,12 @@ class Window(object):
         self.win = glfw.create_window(height=height, width=width, title=title)
         Window.registry[self.win] = self
 
-        # Lock is for thread aware Windows and opening, closing and garbage
-        #  collection
-        self.lock = threading.Lock()
-
-        # Setup window callbacks
+        # Setup window callbacks: Must be run after creating an OpenGL window
         self.setup_callbacks()
 
         # Set context
         glfw.core.make_context_current(self.win)
-        self.client_area = True
-        gl.clear(gl.COLOR_BUFFER_BIT)
+        self.init()
 
     def __del__(self):
         '''Removes the glfw window'''
@@ -117,13 +147,13 @@ class Window(object):
 
     def init(self):
         '''Scene initialization'''
+        gl.clear(gl.COLOR_BUFFER_BIT)
 
     def render(self):
         '''Empty scene'''
 
     def loop(self):
         '''Simplified loop'''
-        self.init()
         self.lock.acquire()
         while not glfw.window_should_close(self.win):
             self.render()
@@ -152,7 +182,7 @@ class Window(object):
         glfw.core.set_window_iconify_callback(self.win, self.on_window_minimize)
         glfw.core.set_drop_callback(self.win, self.on_file_drag_and_drop)
         glfw.core.set_framebuffer_size_callback(self.win, self.on_framebuffer_resize)
-        # glfw.core.set_monitor_callback(self.win, self.on_monitor)
+        glfw.core.set_monitor_callback(self.on_monitor)
 
     @staticmethod
     def cdata_to_pystring(cdata):
@@ -261,7 +291,6 @@ class Window(object):
     @glfw.decorators.cursor_pos_callback
     def on_mouse_move(win, x, y):
         '''Mouse movement handler'''
-        import pdb; pdb.set_trace()
         log.debug('Mouse position: ({x}, {y})'.format(x=x, y=y))
 
     @staticmethod
