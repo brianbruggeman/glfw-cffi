@@ -14,11 +14,10 @@ from OpenGL import GL as gl
 import glfw
 
 
-def get_opengl_compatibility(logger, ffi):
-    if not glfw.init():
-        glfw.terminate()
-        raise RuntimeError('GLFW could not be initialized')
-    logger.debug("Determining capabilities...")
+def get_opengl_compatibility(logger=None):
+    ffi = glfw._ffi
+    if logger is not None:
+        logger.debug("Determining capabilities...")
     opengl_version = None
     versions = [
         (4, 5), (4, 4), (4, 3), (4, 2), (4, 1), (4, 0),
@@ -26,6 +25,13 @@ def get_opengl_compatibility(logger, ffi):
         (2, 1), (2, 0),
         (1, 5), (1, 4), (1, 3), (1, 2), (1, 1), (1, 0),
     ]
+    farg = ffi.new('char []', bytes(''.encode('utf-8')))
+    title = farg
+
+    if not glfw.core.init():
+        glfw.terminate()
+        raise RuntimeError('Could not initialize GLFW')
+
     for major, minor in versions:
         try:
             glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, major)
@@ -33,17 +39,21 @@ def get_opengl_compatibility(logger, ffi):
             glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
             glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, gl.GL_TRUE)
             glfw.window_hint(glfw.VISIBLE, gl.GL_FALSE)
-            window = glfw.create_window(width=1, height=1, title="NULL")
+            window = glfw.core.create_window(1, 1, title, ffi.NULL, ffi.NULL)
             if window != ffi.NULL:
                 glfw.destroy_window(window)
                 version = '.'.join('{}'.format(v) for v in (major, minor))
-                logger.debug('Version "{}" is compatible.'.format(version))
+                if logger is not None:
+                    logger.debug('Version "{}" is compatible.'.format(version))
                 if opengl_version is None:
                     opengl_version = (major, minor)
         except Exception as e:
             import traceback as tb
             for line in tb.format_exc(e).split('\n'):
-                logger.error(line)
+                if logger is not None:
+                    logger.error(line)
+
+    glfw.terminate()
     return opengl_version
 
 
@@ -83,9 +93,6 @@ if __name__ == '__main__':
     logger = logging.getLogger('OpenGL Compatibility')
 
     # determine version and display
-    version = get_opengl_compatibility(logger, FFI())
+    version = get_opengl_compatibility(logger)
     version = '.'.join('{}'.format(v) for v in version)
     logger.info('Version: {version}'.format(version=version))
-
-    # Don't forget to make your graphics card happy.
-    glfw.terminate()
