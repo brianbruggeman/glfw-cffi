@@ -187,16 +187,7 @@ class Window(object):
     @staticmethod
     def cdata_to_pystring(cdata):
         '''Converts char * cdata into a python string'''
-        char = ' '
-        cnt = 0
-        string = []
-        while ord(char) != 0:
-            char = cdata[cnt]
-            cnt += 1
-            if ord(char) == 0:
-                break
-            string.append(char.decode('utf-8'))
-        return ''.join(string)
+        return glfw.cdata_to_pystring(cdata)
 
     @staticmethod
     @glfw.decorators.char_callback

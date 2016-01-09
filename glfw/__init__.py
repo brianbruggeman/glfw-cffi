@@ -419,15 +419,16 @@ def _initialize_module(ffi):
     #  paste from online C examples;  this is a straight pass-through
     # camelCase = {}
 
-    # TODO: Make this work
     camelCase = {
         d: getattr(_glfw, d)
         for d in dir(_glfw)
+        if hasattr(_glfw, d)
     }
 
     easy_translate = {
         _camelToSnake(d.replace('glfw', '')): getattr(_glfw, d)
         for d in dir(_glfw)
+        if hasattr(_glfw, d)
     }
 
     # Core provides direct access to c-libraries rather than a wrapped function
@@ -443,11 +444,13 @@ def _initialize_module(ffi):
     opengl_camelCase = {
         d: getattr(_gl, d)
         for d in dir(_gl)
+        if hasattr(_gl, d)
     }
 
     opengl_snake_case = {
         _camelToSnake(d.replace('gl', '')): getattr(_gl, d)
         for d in dir(_gl)
+        if hasattr(_gl, d)
         if not d.upper() == d
         if not d.startswith('GL_')
     }
@@ -455,6 +458,7 @@ def _initialize_module(ffi):
     opengl_enums = {
         d.replace('GL_', ''): getattr(_gl, d)
         for d in dir(_gl)
+        if hasattr(_gl, d)
         if d.upper() == d
         if d.startswith('GL_')
     }
@@ -569,6 +573,11 @@ def set_error_callback(func):
 ###############################################################################
 # Special helper functions
 ###############################################################################
+def cdata_to_pystring(cdata):
+    '''Converts char * cdata into a python string'''
+    return _ffi.string(cdata)
+
+
 def get_key_string(key):
     '''Returns the name of a key'''
     val = 'KEY_'

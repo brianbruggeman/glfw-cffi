@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, division
 from collections import namedtuple
+from pprint import pprint as pp
 import sys
 import random
 
@@ -18,9 +19,35 @@ def random_colors(count=1):
     return colors
 
 
+def test_import():
+    '''Basic test to determine if glfw can be imported successfully'''
+    import glfw
+
+
+def test_pre_init():
+    '''Tests functions from glfw core that can be run prior to running
+    init (also including init)'''
+
+    import glfw
+
+    @glfw.decorators.error_callback
+    def error_callback(error, description):
+        pp('{}: {}'.format(error, description))
+
+    # These can be called before init
+    assert glfw.set_error_callback(error_callback) is None
+    version = glfw.get_version()
+    version_string = glfw.cdata_to_pystring(glfw.get_version_string())
+    pp("GLFW Version String: {}".format(version_string))
+    assert version is not None
+    assert version_string.startswith(bytes('.'.join('{}'.format(v) for v in version).encode('utf-8')))
+    assert glfw.init() != 0
+    assert glfw.terminate() is None
+
+
 def test_basic_window():
     import glfw
-    assert glfw.init() not in [False, 0, None] or glfw.terminate()
+    assert glfw.init() == glfw.gl.TRUE
     win = glfw.create_window()
     for x in range(2):
         assert glfw.swap_buffers(win) is None
@@ -33,7 +60,10 @@ def test_opengl_compatibility():
     import glfw
     ffi = glfw._ffi
     gl = glfw.gl
-    assert glfw.init() not in [False, 0, None] or glfw.terminate()
+    version = glfw.get_version()
+    version_string = glfw.cdata_to_pystring(glfw.get_version_string())
+    pp("GLFW Version String: {}".format(version_string))
+    assert glfw.init() == glfw.gl.TRUE
     opengl_version = None
     versions = [
         (4, 5), (4, 4), (4, 3), (4, 2), (4, 1), (4, 0),
@@ -65,7 +95,7 @@ def test_opengl_compatibility():
 
 def test_basic_gl_snake_case_2d_triangle():
     import glfw
-    assert glfw.init() not in [False, 0, None] or glfw.terminate()
+    assert glfw.init() == glfw.gl.TRUE
     gl = glfw.gl
     width, height = (640, 480)
     win = glfw.create_window(width=width, height=height)
@@ -91,7 +121,7 @@ def test_basic_gl_snake_case_2d_triangle():
 
 def test_basic_gl_camelCase_2d_triangle():
     import glfw
-    assert glfw.init() not in [False, 0, None] or glfw.terminate()
+    assert glfw.init() == glfw.gl.TRUE
     gl = glfw.gl
     width, height = (640, 480)
     win = glfw.create_window(width=width, height=height)
@@ -117,7 +147,7 @@ def test_basic_gl_camelCase_2d_triangle():
 
 def test_basic_gl_vbo_triangle():
     import glfw
-    assert glfw.init() not in [False, 0, None] or glfw.terminate()
+    assert glfw.init() == glfw.gl.TRUE
     win = glfw.create_window()
     for x in range(2):
         assert glfw.swap_buffers(win) is None
