@@ -21,10 +21,6 @@ matrix:
 
 # Install system dependencies
 before_install:
-  # glfw-cffi requires a working X11 display to run any tests
-  - "export DISPLAY=:99.0"
-  - "sh -e /etc/init.d/xvfb start"
-
   # Update System
   - sudo add-apt-repository 'deb http://us.archive.ubuntu.com/ubuntu/ wily main restricted universe multiverse'
   - sudo add-apt-repository 'deb http://us.archive.ubuntu.com/ubuntu/ wily-updates main restricted universe multiverse'
@@ -45,6 +41,10 @@ before_install:
   # Install special pypy numpy for pypy compatibility or grab standard
   - if [[ $TRAVIS_PYTHON_VERSION == 'pypy' ]]; then travis_retry pip install git+https://bitbucket.org/pypy/numpy.git@pypy-4.0.1; fi
   - pip install -r requirements.txt
+
+  # glfw-cffi requires a working X11 display to run any tests
+  - "export DISPLAY=:99.0"
+  - "sh -e /etc/init.d/xvfb start"
 
 # Runs first
 install:
