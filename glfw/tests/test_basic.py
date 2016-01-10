@@ -116,9 +116,9 @@ def test_opengl_compatibility():
                 glfw.destroy_window(window)
 
         except Exception as e:
-            import traceback as tb
-            for line in tb.format_exc(e).split('\n'):
+            for line in e.args:
                 print('ERROR: ' + line, file=sys.stderr)
+
     pp(opengl_info)
     assert glfw.terminate() is None
     assert opengl_version in versions

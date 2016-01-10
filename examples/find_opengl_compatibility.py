@@ -10,6 +10,8 @@ Options:
     -h --help        This message
     -v --verbose     Increases message output
 '''
+import sys
+
 import OpenGL
 OpenGL.ERROR_CHECKING = True
 from OpenGL import GL as gl
@@ -21,6 +23,7 @@ def get_opengl_compatibility(logger=None):
     if logger is not None:
         logger.debug("Determining capabilities...")
     opengl_version = None
+    opengl_info = {}
     versions = [
         (4, 5), (4, 4), (4, 3), (4, 2), (4, 1), (4, 0),
         (3, 3), (3, 2), (3, 1), (3, 0),
@@ -43,17 +46,35 @@ def get_opengl_compatibility(logger=None):
             glfw.window_hint(glfw.VISIBLE, gl.GL_FALSE)
             window = glfw.core.create_window(1, 1, title, ffi.NULL, ffi.NULL)
             if window != ffi.NULL:
-                glfw.destroy_window(window)
+                glfw.make_context_current(window)
                 version = '.'.join('{}'.format(v) for v in (major, minor))
                 if logger is not None:
                     logger.debug('Version "{}" is compatible.'.format(version))
                 if opengl_version is None:
                     opengl_version = (major, minor)
+                    opengl_info['version'] = gl.get_string(gl.VERSION)
+                    opengl_info['vendor'] = gl.get_string(gl.VENDOR)
+                    opengl_info['renderer'] = gl.get_string(gl.RENDERER)
+                    opengl_info['GLSL'] = gl.get_string(gl.SHADING_LANGUAGE_VERSION)
+
+                    # Display Extension information
+                    if version < (3, 1):
+                        extension_count = gl.glGetIntegerv(gl.EXTENSIONS)
+                        for index in range(extension_count):
+                            extension_string = gl.get_string(gl.EXTENSIONS, index)
+                            opengl_info.setdefault('extensions', []).append(extension_string)
+
+                    # Display GLSL Versions
+                    if version >= (4, 3):
+                        glsl_version_count = gl.glGetIntegerv(gl.NUM_SHADING_LANGUAGE_VERSIONS)
+                        for index in range(glsl_version_count):
+                            glsl_version = gl.get_string(gl.SHADING_LANGUAGE_VERSION, index)
+                            opengl_info.setdefault('glsl_supported', []).append(glsl_version)
+                glfw.destroy_window(window)
+
         except Exception as e:
-            import traceback as tb
-            for line in tb.format_exc(e).split('\n'):
-                if logger is not None:
-                    logger.error(line)
+            for line in e.args:
+                print('ERROR: ' + line, file=sys.stderr)
 
     glfw.terminate()
     return opengl_version
