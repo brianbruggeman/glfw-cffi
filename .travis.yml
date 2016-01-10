@@ -53,4 +53,4 @@ install:
 # command to run tests
 script:
    # - echo 'No tests will run on travis.ci currently'
-   - py.test
+   - py.test -s
