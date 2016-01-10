@@ -46,15 +46,23 @@ before_install:
   - "sh -e /etc/init.d/xvfb start"
 
 install:
-   - pip install .
+   - pip install -e .
 
 before_script:
   # Required for running a test
   - pip install pytest
   - pip install pytest-flake8
   - pip install pytest-cov
+  # Required for coveralls
+  - pip install python-coveralls
 
 # command to run tests
 script:
-   - py.test -s --cov=glfw
+   # Run each separately so we have an idea of what's broken in travis
+   - py.test -s
+   - py.test --cov=glfw --cov-report=term-missing
    - py.test --flake8 glfw
+   - py.test
+
+after_success:
+   - coveralls
