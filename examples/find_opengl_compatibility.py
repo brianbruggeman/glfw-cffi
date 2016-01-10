@@ -17,6 +17,8 @@ OpenGL.ERROR_CHECKING = True
 from OpenGL import GL as gl
 import glfw
 
+import sys
+
 
 def get_opengl_compatibility(logger=None):
     ffi = glfw._ffi
@@ -74,6 +76,7 @@ def get_opengl_compatibility(logger=None):
 
         except Exception as e:
             for line in e.args:
+                line = '{}'.format(line)
                 print('ERROR: ' + line, file=sys.stderr)
 
     glfw.terminate()

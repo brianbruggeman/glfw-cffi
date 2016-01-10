@@ -117,6 +117,7 @@ def test_opengl_compatibility():
 
         except Exception as e:
             for line in e.args:
+                line = '{}'.format(line)
                 print('ERROR: ' + line, file=sys.stderr)
 
     pp(opengl_info)
