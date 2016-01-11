@@ -120,7 +120,10 @@ def test_opengl_compatibility():
                 line = '{}'.format(line)
                 print('ERROR: ' + line, file=sys.stderr)
 
-    pp(opengl_info)
+    pp('OpenGL Version: {}'.format(opengl_info['version']))
+    pp('OpenGL Vendor: {}'.format(opengl_info['vendor']))
+    pp('OpenGL Renderer: {}'.format(opengl_info['renderer']))
+    pp('OpenGL GLSL Supported: {}'.format(opengl_info['GLSL']))
     assert glfw.terminate() is None
     assert opengl_version in versions
 
