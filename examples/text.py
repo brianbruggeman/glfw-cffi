@@ -22,55 +22,66 @@ from textwrap import dedent as dd
 import numpy as np
 import freetype as ft
 import OpenGL
+# Turn off ERROR_CHECKING to improve OpenGL performance
+#  This must be run before glfw is imported
 OpenGL.ERROR_CHECKING = False
-import glfw
-import OpenGL.GL as gl
+# glfwCreateWindow and glfwGetFrameBufferSize integrate with python more easily
+#  when using the wrapped functions
+from glfw import create_window, get_framebuffer_size
+# Core gives direct access to glfw c-functions
+import glfw.core as glfw
+# Decorators allow the python functions to be called from c-code
+import glfw.decorators as glfw_decorators
+# GLFW comes with a replacement for OpenGL which uses OpenGL but renames
+#  the functions so they are snake_case and drops the GL_ prefix
+#  from enumerations
+import glfw.gl as gl
 
 
 def on_display(data, height, texid, base):
-    gl.glClearColor(0, 0, 0, 1)
-    gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
-    gl.glBindTexture(gl.GL_TEXTURE_2D, texid)
-    gl.glColor(1, 1, 1, 1)
-    gl.glPushMatrix()
+    gl.clear_color(0, 0, 0, 1)
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
+    gl.bind_texture(gl.TEXTURE_2D, texid)
+    gl.color(1, 1, 1, 1)
+    gl.push_matrix()
     padding = 5
-    gl.glTranslate(padding, height-padding, 0)
-    gl.glPushMatrix()
-    gl.glListBase(base+1)
-    gl.glCallLists(data)
-    gl.glPopMatrix()
-    gl.glPopMatrix()
+    gl.translate(padding, height - padding, 0)
+    gl.push_matrix()
+    gl.list_base(base + 1)
+    gl.call_lists(data)
+    gl.pop_matrix()
+    gl.pop_matrix()
 
 
-@glfw.decorators.window_size_callback
+@glfw_decorators.window_size_callback
 def on_resize(win, width, height):
-    fb_width, fb_height = glfw.get_framebuffer_size(win)
-    gl.glViewport(0, 0, fb_width, fb_height)
-    gl.glLoadIdentity()
+    fb_width, fb_height = get_framebuffer_size(win)
+    gl.viewport(0, 0, fb_width, fb_height)
+    gl.load_identity()
 
 
-@glfw.decorators.framebuffer_size_callback
+@glfw_decorators.framebuffer_size_callback
 def on_framebuffer_resize(win, width, height):
-    gl.glViewport(0, 0, width, height)
-    gl.glLoadIdentity()
+    gl.viewport(0, 0, width, height)
+    gl.load_identity()
 
 
-@glfw.decorators.key_callback
+@glfw_decorators.key_callback
 def on_key(win, key, code, action, mods):
     if key == glfw.KEY_ESCAPE:
-        glfw.set_window_should_close(win, gl.GL_TRUE)
+        glfw.set_window_should_close(win, gl.TRUE)
 
 
-@glfw.decorators.mouse_button_callback
+@glfw_decorators.mouse_button_callback
 def on_mouse_button(win, button, action, mods):
-    glfw.set_window_should_close(win, gl.GL_TRUE)
+    glfw.set_window_should_close(win, gl.TRUE)
 
 
 def make_font(filename, size, texid, base):
     '''Rasterizes font to a bitmap'''
     # Load font  and check it is monotype
     face = ft.Face(filename)
-    face.set_char_size(size*64)
+    face.set_char_size(size * 64)
     if not face.is_fixed_width:
         raise 'Font is not monotype'
 
@@ -81,50 +92,52 @@ def make_font(filename, size, texid, base):
         bitmap = face.glyph.bitmap
         width = max(width, bitmap.width)
         ascender = max(ascender, face.glyph.bitmap_top)
-        descender = max(descender, bitmap.rows-face.glyph.bitmap_top)
-    height = ascender+descender
+        descender = max(descender, bitmap.rows - face.glyph.bitmap_top)
+    height = ascender + descender
 
     # Generate texture data
-    Z = np.zeros((height*6, width*16), dtype=np.ubyte)
+    Z = np.zeros((height * 6, width * 16), dtype=np.ubyte)
+    flags = ft.FT_LOAD_RENDER | ft.FT_LOAD_FORCE_AUTOHINT
     for j in range(6):
         for i in range(16):
-            face.load_char(chr(32+j*16+i), ft.FT_LOAD_RENDER | ft.FT_LOAD_FORCE_AUTOHINT)
+            face.load_char(chr(32 + j * 16 + i), flags)
             bitmap = face.glyph.bitmap
-            x = i*width + face.glyph.bitmap_left
-            y = j*height + ascender - face.glyph.bitmap_top
-            Z[y:y+bitmap.rows, x:x+bitmap.width].flat = bitmap.buffer
+            x = i * width + face.glyph.bitmap_left
+            y = j * height + ascender - face.glyph.bitmap_top
+            Z[y:y + bitmap.rows, x:x + bitmap.width].flat = bitmap.buffer
 
     # Bound texture
     texid = gl.glGenTextures(1)
-    gl.glBindTexture(gl.GL_TEXTURE_2D, texid)
-    gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_LINEAR)
-    gl.glTexParameterf(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_LINEAR)
-    gl.glTexImage2D(gl.GL_TEXTURE_2D, 0, gl.GL_ALPHA, Z.shape[1], Z.shape[0], 0,
-                    gl.GL_ALPHA, gl.GL_UNSIGNED_BYTE, Z)
+    gl.bind_texture(gl.TEXTURE_2D, texid)
+    gl.tex_parameterf(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+    gl.tex_parameterf(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+    gl.tex_image_2d(gl.TEXTURE_2D, 0, gl.ALPHA,
+                    Z.shape[1], Z.shape[0], 0,
+                    gl.ALPHA, gl.UNSIGNED_BYTE, Z)
 
     # Generate display lists
-    dx, dy = width/float(Z.shape[1]), height/float(Z.shape[0])
-    base = gl.glGenLists(8*16)
-    for i in range(8*16):
+    dx, dy = width / float(Z.shape[1]), height / float(Z.shape[0])
+    base = gl.gen_lists(8 * 16)
+    for i in range(8 * 16):
         c = chr(i)
         x = i % 16
-        y = i//16-2
-        gl.glNewList(base+i, gl.GL_COMPILE)
+        y = i // 16 - 2
+        gl.new_list(base + i, gl.COMPILE)
         if (c == '\n'):
-            gl.glPopMatrix()
-            gl.glTranslatef(0, -height, 0)
-            gl.glPushMatrix()
+            gl.pop_matrix()
+            gl.translatef(0, -height, 0)
+            gl.push_matrix()
         elif (c == '\t'):
-            gl.glTranslatef(4*width, 0, 0)
+            gl.translatef(4 * width, 0, 0)
         elif (i >= 32):
-            gl.glBegin(gl.GL_QUADS)
-            gl.glTexCoord2f((x)*dx, (y+1)*dy), gl.glVertex(0,     -height)
-            gl.glTexCoord2f((x)*dx, (y)*dy), gl.glVertex(0,     0)
-            gl.glTexCoord2f((x+1)*dx, (y)*dy), gl.glVertex(width, 0)
-            gl.glTexCoord2f((x+1)*dx, (y+1)*dy), gl.glVertex(width, -height)
-            gl.glEnd()
-            gl.glTranslatef(width, 0, 0)
-        gl.glEndList()
+            gl.begin(gl.QUADS)
+            gl.tex_coord_2f((x) * dx, (y + 1) * dy), gl.vertex(0, -height)
+            gl.tex_coord_2f((x) * dx, (y) * dy), gl.vertex(0, 0)
+            gl.tex_coord_2f((x + 1) * dx, (y) * dy), gl.vertex(width, 0)
+            gl.tex_coord_2f((x + 1) * dx, (y + 1) * dy), gl.vertex(width, -height)
+            gl.end()
+            gl.translatef(width, 0, 0)
+        gl.end_list()
     return texid
 
 
@@ -138,37 +151,37 @@ def main(**options):
     height = options.get('height')
     font = options.get('font')
     font_size = options.get('font_size')
-    win = glfw.create_window(
-        title=options.get('title'),
-        height=height,
-        width=width
-    )
+    win = create_window(height=height, width=width, title=options.get('title'))
     glfw.set_key_callback(win, on_key)
     glfw.set_mouse_button_callback(win, on_mouse_button)
     glfw.set_window_size_callback(win, on_resize)
     glfw.set_framebuffer_size_callback(win, on_framebuffer_resize)
     glfw.make_context_current(win)
 
-    # determine max framebuffer size
-    fb_width, fb_height = glfw.get_framebuffer_size(win)
+    # Determine max frame-buffer size for "this" display/monitor
+    #  This keeps the text size consistent when moving across Low DPI
+    #  and High DPI displays.
+    fb_width, fb_height = get_framebuffer_size(win)
 
-    # Setup for font
-    gl.glTexEnvf(gl.GL_TEXTURE_ENV, gl.GL_TEXTURE_ENV_MODE, gl.GL_MODULATE)
-    gl.glEnable(gl.GL_DEPTH_TEST)
-    gl.glEnable(gl.GL_BLEND)
-    gl.glEnable(gl.GL_COLOR_MATERIAL)
-    gl.glColorMaterial(gl.GL_FRONT_AND_BACK, gl.GL_AMBIENT_AND_DIFFUSE)
-    gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
-    gl.glEnable(gl.GL_TEXTURE_2D)
+    # Setup OpenGL for font
+    gl.tex_envf(gl.TEXTURE_ENV, gl.TEXTURE_ENV_MODE, gl.MODULATE)
+    gl.enable(gl.DEPTH_TEST)
+    gl.enable(gl.BLEND)
+    gl.enable(gl.COLOR_MATERIAL)
+    gl.color_material(gl.FRONT_AND_BACK, gl.AMBIENT_AND_DIFFUSE)
+    gl.blend_func(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+    gl.enable(gl.TEXTURE_2D)
+    # Generate a texture atlas for the font
+    font_size = font_size * fb_width // width
     texid = make_font(font, font_size, texid, base)
 
     # Run the resize code to setup the display
-    gl.glViewport(0, 0, fb_width, fb_height)
-    gl.glMatrixMode(gl.GL_PROJECTION)
-    gl.glLoadIdentity()
-    gl.glOrtho(0, fb_width, 0, fb_height, -1, 1)
-    gl.glMatrixMode(gl.GL_MODELVIEW)
-    gl.glLoadIdentity()
+    gl.viewport(0, 0, fb_width, fb_height)
+    gl.matrix_mode(gl.PROJECTION)
+    gl.load_identity()
+    gl.ortho(0, fb_width, 0, fb_height, -1, 1)
+    gl.matrix_mode(gl.MODELVIEW)
+    gl.load_identity()
 
     # Setup what we'll display
     text_file = options.get('text')
@@ -184,7 +197,7 @@ def main(**options):
     data = [ord(c) for c in text]
 
     while not glfw.window_should_close(win):
-        gl.glClear(gl.GL_COLOR_BUFFER_BIT)
+        gl.clear(gl.COLOR_BUFFER_BIT)
         # Use the framebuffer height to prevent viewport issues when moving from
         #  LoDPI to HiDPI in a multiple monitor, multiple-dpi display scenario
         on_display(data, fb_height, texid, base)

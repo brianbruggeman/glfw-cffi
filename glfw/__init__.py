@@ -41,6 +41,7 @@ import re
 import sys
 
 from cffi import FFI
+import OpenGL.GL as _gl
 
 
 if sys.version[0] == 2:
@@ -50,7 +51,7 @@ modname = os.path.basename(os.path.dirname(__file__))
 
 ###############################################################################
 __title__ = 'glfw-cffi'
-__version__ = '0.1.6'
+__version__ = '0.1.7'
 __author__ = 'Brian Bruggeman'
 __email__ = 'brian.m.bruggeman@gmail.com'
 __license__ = 'Apache 2.0'
@@ -260,10 +261,42 @@ def _wrap_func(ffi, func_decl, func):
 
 
 def _camelToSnake(string):
-    '''Converts camelCase to snake_case'''
-    pass01 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', string)
-    final = re.sub('([a-z0-9])([A-Z])', r'\1_\2', pass01).lower()
-    return final
+    '''Converts camelCase to snake_case
+
+    >>> print(_camelToSnake('ACase'))
+    a_case
+    >>> print(_camelToSnake('AnotherCaseHere'))
+    another_case_here
+    >>> print(_camelToSnake('AnotherCaseHereNow'))
+    another_case_here_now
+    >>> print(_camelToSnake('SimpleCase'))
+    simple_case
+    >>> print(_camelToSnake('simpleCase2'))
+    simple_case_2
+    >>> print(_camelToSnake('simpleCase3d'))
+    simple_case_3d
+    >>> print(_camelToSnake('simpleCase4D'))
+    simple_case_4_d
+    >>> print(_camelToSnake('simpleCase5thDimension'))
+    simple_case_5th_dimension
+    >>> print(_camelToSnake('simpleCase66thDimension'))
+    simple_case_66th_dimension
+    '''
+    patterns = [
+        (r'(.)([0-9]+)', r'\1_\2'),
+        # (r'(.)([A-Z][a-z]+)', r'\1_\2'),
+        # (r'(.)([0-9]+)([a-z]+)', r'\1_\2\3'),
+        (r'([a-z]+)([A-Z])', r'\1_\2'),
+    ]
+    engines = [
+        (pattern, replacement, re.compile(pattern))
+        for pattern, replacement in patterns
+    ]
+    for data in engines:
+        pattern, replacement, eng = data
+        string = eng.sub(replacement, string)
+    string = string.lower()
+    return string
 
 
 # Modifies the module directly by introspection and loading up glfw
@@ -384,21 +417,60 @@ def _initialize_module(ffi):
 
     # And finally keep the API the same for those that want to copy and
     #  paste from online C examples;  this is a straight pass-through
-    camelCase = {}
+    # camelCase = {}
 
-    # TODO: Make this work
-    # camelCase = {
-    #     d: getattr(_glfw, d)
-    #     for d in dir(_glfw)
-    # }
+    camelCase = {
+        d: getattr(_glfw, d)
+        for d in dir(_glfw)
+        if hasattr(_glfw, d)
+    }
 
-    # Segregate python from cffi
+    easy_translate = {
+        _camelToSnake(d.replace('glfw', '')): getattr(_glfw, d)
+        for d in dir(_glfw)
+        if hasattr(_glfw, d)
+    }
+
+    # Core provides direct access to c-libraries rather than a wrapped function
     core = imp.new_module('core')
     sys.modules['{}.core'.format(modname)] = core
     core.__dict__.update(camelCase)
+    core.__dict__.update(easy_translate)
 
     # Add standard API to module.  Note the lack of wrapping
     globals()['core'] = core
+
+    # gl provides a snake_case python-esque interface to opengl
+    opengl_camelCase = {
+        d: getattr(_gl, d)
+        for d in dir(_gl)
+        if hasattr(_gl, d)
+    }
+
+    opengl_snake_case = {
+        _camelToSnake(d.replace('gl', '')): getattr(_gl, d)
+        for d in dir(_gl)
+        if hasattr(_gl, d)
+        if not d.upper() == d
+        if not d.startswith('GL_')
+    }
+
+    opengl_enums = {
+        d.replace('GL_', ''): getattr(_gl, d)
+        for d in dir(_gl)
+        if hasattr(_gl, d)
+        if d.upper() == d
+        if d.startswith('GL_')
+    }
+
+    gl = imp.new_module('gl')
+    sys.modules['{}.gl'.format(modname)] = gl
+    gl.__dict__.update(opengl_camelCase)
+    gl.__dict__.update(opengl_snake_case)
+    gl.__dict__.update(opengl_enums)
+
+    # Add standard API to module.  Note the lack of wrapping
+    globals()['gl'] = gl
 
     # Update decorators
     decorators = imp.new_module('decorators')
@@ -501,6 +573,11 @@ def set_error_callback(func):
 ###############################################################################
 # Special helper functions
 ###############################################################################
+def cdata_to_pystring(cdata):
+    '''Converts char * cdata into a python string'''
+    return _ffi.string(cdata)
+
+
 def get_key_string(key):
     '''Returns the name of a key'''
     val = 'KEY_'
