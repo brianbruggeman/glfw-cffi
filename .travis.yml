@@ -59,7 +59,7 @@ before_script:
 # command to run tests
 script:
    # Run each separately so we have an idea of what's broken in travis
-   - py.test --flake8 glfw --cov=glfw --cov-report=term-missing
+   - py.test 
 
 after_success:
    - coveralls
