@@ -44,7 +44,7 @@ from cffi import FFI
 import OpenGL.GL as _gl
 
 
-if sys.version[0] == 2:
+if sys.version.startswith('2'):
     range = xrange
 
 modname = os.path.basename(os.path.dirname(__file__))
@@ -61,15 +61,6 @@ __shortdesc__ = 'Foreign Function Interface wrapper for GLFW v3.x'
 
 
 ###############################################################################
-def _display(object):
-    '''Purely for debugging'''
-    for d in dir(object):
-        try:
-            print('{}: {}'.format(d, getattr(object, d)))
-        except TypeError:
-            print('{}: type error'.format(d))
-
-
 def _get_function_declaration(line):
     '''Reads a line of C code and then extracts function declarations if found'''
     found = None
@@ -120,9 +111,7 @@ def _fix_source(data):
                 found = re.search('^(\s*)\#define\s+([0-9A-Za-z_]+)\s*(.*)$', line)
                 if found:
                     space, key, value = found.groups()
-                    if len(space) > 0:
-                        continue
-                    if value.startswith('__'):
+                    if ((len(space) > 0) or value.startswith('__')):
                         continue
                     elif value in defines:
                         old_value, value = value, defines[value]
@@ -130,10 +119,6 @@ def _fix_source(data):
                     defines[key] = value
         lines.append(line)
         prev_line = line
-    if 'GLFW_TRUE' not in defines:
-        lines.append('#define GLFW_TRUE 1')
-    if 'GLFW_FALSE' not in defines:
-        lines.append('#define GLFW_FALSE 0')
     return '\n'.join(lines)
 
 
@@ -159,26 +144,7 @@ def _wrap_func(ffi, func_decl, func):
             new_args = []
             func_kwds = {}
             for (fname, ftype), arg in zip(func_fields, args):
-                if not isinstance(arg, ffi.CData) and ftype.kind not in ['primitive']:
-                    farg = ffi.new(ftype.cname)
-                    farg[0] = arg
-                    arg = farg
                 func_kwds[fname] = arg
-            for kwd, val in kwds.items():
-                if kwd in fields:
-                    try:
-                        fname, ftype = fields[kwd]
-                    except TypeError:
-                        fname = kwd
-                        ftype = fields[kwd]
-                    if not isinstance(val, ffi.CData) and ftype.kind not in ['primitive']:
-                        if ftype.cname == 'char *':
-                            farg = ffi.new('char[]', val)
-                        else:
-                            farg = ffi.new(ftype.cname)
-                            farg[0] = val
-                        val = farg
-                    func_kwds[fname] = val
             for name, ftype in func_fields:
                 val = func_kwds.get(name)
                 if val is None:
@@ -186,8 +152,6 @@ def _wrap_func(ffi, func_decl, func):
                         val = ffi.new(ftype.cname, val)
                         func_kwds[name] = val
                         retval.append(val)
-                    else:
-                        val = ffi.NULL
                 new_args.append(val)
             if func_res.kind != 'void':
                 retval = func(*new_args)
@@ -302,15 +266,9 @@ def _camelToSnake(string):
 # Modifies the module directly by introspection and loading up glfw
 #  library and parsing glfw header file
 def _initialize_module(ffi):
-    glfw_library = None
+    glfw_library = os.environ.get('GLFW_LIBRARY', None)
 
-    # First if there is an environment variable pointing to the library
-    if 'GLFW_LIBRARY' in os.environ:
-        GLFW_LIBRARY = os.environ['GLFW_LIBRARY']
-        if os.path.exists():
-            glfw_library = os.path.realpath(GLFW_LIBRARY)
-
-    # Else, try to find it
+    # If no Environment variable, search for library
     if glfw_library is None:
         ordered_library_names = ['glfw3', 'glfw']
         for library_name in ordered_library_names:
@@ -319,8 +277,6 @@ def _initialize_module(ffi):
                 break
 
     # Else, we failed and exit
-    if glfw_library is None:
-        raise OSError('GLFW library not found')
     globals()['glfw_library'] = glfw_library
 
     # Look for the header being used
@@ -376,6 +332,20 @@ def _initialize_module(ffi):
         if hasattr(func, '__call__'):
             funcs[func_name] = func
             camelCase[d] = func
+
+    camelCase = {
+        _camelToSnake(d.replace('glfw', '')): getattr(_glfw, d)
+        for d in dir(_glfw)
+        if hasattr(_glfw, d)
+        if not d.startswith('_')
+        if hasattr(getattr(_glfw, d), '__call__')
+    }
+
+    funcs = {
+        _camelToSnake(k.replace('glfw', '')): v
+        for k, v in camelCase.items()
+    }
+
     # TODO: This elegance should not die...
     # funcs = {
     #     _camelToSnake(d.replace('glfw', '')): getattr(_glfw, d)
