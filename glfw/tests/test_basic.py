@@ -20,13 +20,12 @@ def test_pre_init():
 
     @glfw.decorators.error_callback
     def error_callback(error, description):
-        pp('ERROR: {}: {}'.format(error, glfw._ffi.string(description)))
+        description = glfw._ffi.string(description)
 
     # These can be called before init
     assert glfw.set_error_callback(error_callback) is None
     glfw_version = glfw.get_version()
     glfw_version_string = glfw.cdata_to_pystring(glfw.get_version_string())
-    pp("GLFW Version String: {}".format(glfw_version_string))
     assert glfw_version is not None
     assert glfw_version_string.startswith(bytes('.'.join('{}'.format(v) for v in glfw_version).encode('utf-8')))
     assert glfw.init() != 0
@@ -120,10 +119,20 @@ def test_opengl_compatibility():
                 line = '{}'.format(line)
                 print('ERROR: ' + line, file=sys.stderr)
 
+    glfw_version_string = glfw._ffi.string(glfw.get_version_string())
+    pp('')
+    pp("GLFW Version String: {}".format(glfw_version_string))
     pp('OpenGL Version: {}'.format(opengl_info['version']))
     pp('OpenGL Vendor: {}'.format(opengl_info['vendor']))
     pp('OpenGL Renderer: {}'.format(opengl_info['renderer']))
     pp('OpenGL GLSL Supported: {}'.format(opengl_info['GLSL']))
+    if 'extensions' in opengl_info:
+        for extension in opengl_info.get('extensions'):
+            pp('OpenGL Extension: {}'.format(extension))
+    if 'glsl_supported' in opengl_info:
+        for glsl in opengl_info.get('extensions'):
+            if glsl != opengl_info['GLSL']:
+                pp('OpenGL GLSL Supported: {}'.format(glsl))
     assert glfw.terminate() is None
     assert opengl_version in versions
 
