@@ -342,8 +342,7 @@ def _initialize_module(ffi):
                 funcs[snake_name] = _wrap_func(ffi, func_decl, some_func)
             else:
                 decl_func_name = func_decl['func_name']
-                if hasattr(_glfw, decl_func_name):
-                    func = getattr(_glfw, decl_func_name, None)
+                func = getattr(_glfw, decl_func_name) if hasattr(_glfw, decl_func_name) else None
                 if func:
                     funcs[snake_name] = _wrap_func(ffi, func_decl, func)
                     camelCase[decl_func_name] = func
