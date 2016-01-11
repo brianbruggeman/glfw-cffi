@@ -134,7 +134,7 @@ def _wrap_func(ffi, func_decl, func):
         arg = arg.strip()
         arg = arg.split(' ')[-1]  # to capture the field name without the type data
         func_fields.append((arg, ctype))
-    fields = dict(func_fields)
+    # fields = dict(func_fields)
 
     # Auto-wrapper for cffi function call
     @functools.wraps(func)
