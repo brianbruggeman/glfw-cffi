@@ -319,20 +319,6 @@ def _initialize_module(ffi):
     _glfw = ffi.dlopen(glfw_library)
 
     # Create python equivalents of glfw functions
-    funcs = {}
-    camelCase = {}
-    for d in dir(_glfw):
-        if d.startswith('_'):
-            continue
-        func_name = _camelToSnake(d.replace('glfw', ''))
-        try:
-            func = getattr(_glfw, d)  # TODO: why doesn't this work on ubuntu?
-        except AttributeError:
-            continue
-        if hasattr(func, '__call__'):
-            funcs[func_name] = func
-            camelCase[d] = func
-
     camelCase = {
         _camelToSnake(d.replace('glfw', '')): getattr(_glfw, d)
         for d in dir(_glfw)
@@ -346,15 +332,7 @@ def _initialize_module(ffi):
         for k, v in camelCase.items()
     }
 
-    # TODO: This elegance should not die...
-    # funcs = {
-    #     _camelToSnake(d.replace('glfw', '')): getattr(_glfw, d)
-    #     for d in dir(_glfw)
-    #     if not d.startswith('_')
-    #     if hasattr(getattr(_glfw, d), '__call__')
-    # }
-
-    # Auto-wrap functions to make the friendly to Python
+    # Auto-wrap functions to make them friendly to Python
     for line in source.split('\n'):
         func_decl = _get_function_declaration(line)
         if func_decl:
@@ -364,10 +342,8 @@ def _initialize_module(ffi):
                 funcs[snake_name] = _wrap_func(ffi, func_decl, some_func)
             else:
                 decl_func_name = func_decl['func_name']
-                try:
+                if hasattr(_glfw, decl_func_name):
                     func = getattr(_glfw, decl_func_name, None)
-                except AttributeError:
-                    continue
                 if func:
                     funcs[snake_name] = _wrap_func(ffi, func_decl, func)
                     camelCase[decl_func_name] = func

@@ -33,6 +33,18 @@ def test_pre_init():
     assert glfw.terminate() is None
 
 
+def test_basic_package_functions():
+    '''Runs tests on basic package information that is available to the
+    end user
+    '''
+    import glfw
+    assert glfw.get_include() is not None
+    assert glfw.get_key_string(glfw.KEY_A) == 'a'
+    assert glfw.get_mod_string(glfw.MOD_SHIFT) == 'shift'
+    assert glfw.get_mouse_button_string(glfw.MOUSE_BUTTON_LEFT) == 'left'
+    assert glfw.get_action_string(glfw.RELEASE) == 'release'
+
+
 def test_basic_window():
     '''Runs a simple window example'''
     import glfw
