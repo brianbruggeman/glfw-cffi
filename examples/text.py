@@ -27,15 +27,11 @@ import OpenGL
 OpenGL.ERROR_CHECKING = False
 # glfwCreateWindow and glfwGetFrameBufferSize integrate with python more easily
 #  when using the wrapped functions
-from glfw import create_window, get_framebuffer_size
-# Core gives direct access to glfw c-functions
-import glfw.core as glfw
-# Decorators allow the python functions to be called from c-code
-import glfw.decorators as glfw_decorators
+import glfw
 # GLFW comes with a replacement for OpenGL which uses OpenGL but renames
 #  the functions so they are snake_case and drops the GL_ prefix
 #  from enumerations
-import glfw.gl as gl
+from glfw import gl
 
 
 def on_display(data, height, texid, base):
@@ -53,28 +49,28 @@ def on_display(data, height, texid, base):
     gl.pop_matrix()
 
 
-@glfw_decorators.window_size_callback
+@glfw.decorators.window_size_callback
 def on_resize(win, width, height):
-    fb_width, fb_height = get_framebuffer_size(win)
+    fb_width, fb_height = glfw.get_framebuffer_size(win)
     gl.viewport(0, 0, fb_width, fb_height)
     gl.load_identity()
 
 
-@glfw_decorators.framebuffer_size_callback
+@glfw.decorators.framebuffer_size_callback
 def on_framebuffer_resize(win, width, height):
     gl.viewport(0, 0, width, height)
     gl.load_identity()
 
 
-@glfw_decorators.key_callback
+@glfw.decorators.key_callback
 def on_key(win, key, code, action, mods):
-    if key == glfw.KEY_ESCAPE:
-        glfw.set_window_should_close(win, gl.TRUE)
+    if key in [glfw.KEY_ESCAPE, glfw.KEY_Q]:
+        # Quit
+        glfw.core.set_window_should_close(win, gl.GL_TRUE)
 
-
-@glfw_decorators.mouse_button_callback
+@glfw.decorators.mouse_button_callback
 def on_mouse_button(win, button, action, mods):
-    glfw.set_window_should_close(win, gl.TRUE)
+    glfw.core.set_window_should_close(win, gl.TRUE)
 
 
 def make_font(filename, size, texid, base):
@@ -142,7 +138,7 @@ def make_font(filename, size, texid, base):
 
 
 def main(**options):
-    if not glfw.init():
+    if not glfw.core.init():
         raise RuntimeError('Could not initialize GLFW')
 
     texid = 0
@@ -151,17 +147,17 @@ def main(**options):
     height = options.get('height')
     font = options.get('font')
     font_size = options.get('font_size')
-    win = create_window(height=height, width=width, title=options.get('title'))
-    glfw.set_key_callback(win, on_key)
-    glfw.set_mouse_button_callback(win, on_mouse_button)
-    glfw.set_window_size_callback(win, on_resize)
-    glfw.set_framebuffer_size_callback(win, on_framebuffer_resize)
-    glfw.make_context_current(win)
+    win = glfw.create_window(height=height, width=width, title=options.get('title'))
+    glfw.core.set_key_callback(win, on_key)
+    glfw.core.set_mouse_button_callback(win, on_mouse_button)
+    glfw.core.set_window_size_callback(win, on_resize)
+    glfw.core.set_framebuffer_size_callback(win, on_framebuffer_resize)
+    glfw.core.make_context_current(win)
 
     # Determine max frame-buffer size for "this" display/monitor
     #  This keeps the text size consistent when moving across Low DPI
     #  and High DPI displays.
-    fb_width, fb_height = get_framebuffer_size(win)
+    fb_width, fb_height = glfw.core.get_framebuffer_size(win)
 
     # Setup OpenGL for font
     gl.tex_envf(gl.TEXTURE_ENV, gl.TEXTURE_ENV_MODE, gl.MODULATE)
@@ -196,15 +192,15 @@ def main(**options):
 
     data = [ord(c) for c in text]
 
-    while not glfw.window_should_close(win):
+    while not glfw.core.window_should_close(win):
         gl.clear(gl.COLOR_BUFFER_BIT)
         # Use the framebuffer height to prevent viewport issues when moving from
         #  LoDPI to HiDPI in a multiple monitor, multiple-dpi display scenario
         on_display(data, fb_height, texid, base)
-        glfw.swap_buffers(win)
-        glfw.poll_events()
+        glfw.core.swap_buffers(win)
+        glfw.core.poll_events()
 
-    glfw.terminate()
+    glfw.core.terminate()
 
 
 if __name__ == '__main__':

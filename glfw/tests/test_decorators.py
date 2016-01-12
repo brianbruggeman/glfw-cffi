@@ -12,6 +12,7 @@ def test_decorators():
     assert glfw.init() == gl.TRUE
 
     width, height = (1, 1)
+    glfw.window_hint(glfw.FOCUSED, False)
     win = glfw.create_window(title='Decorator test', width=width, height=height)
     glfw.make_context_current(win)
 
@@ -43,14 +44,13 @@ def test_decorators():
     def on_file_drag_and_drop(win, count, paths):
         '''Handles drag and drop of file paths'''
         for some_path in range(count):
-            path = glfw._ffi.string(paths[some_path])
+            path = paths[some_path]
             pp('Drag and dropped file: {}'.format(path))
 
     @glfw.decorators.error_callback
     def on_error(code, message):
         '''Handles an error callback event'''
-        error_message = glfw._ffi.string(message)
-        message = '{}: {}'.format(code, error_message)
+        message = '{}: {}'.format(code, message)
         pp(message)
 
     @glfw.decorators.framebuffer_size_callback

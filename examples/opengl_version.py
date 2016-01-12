@@ -11,6 +11,7 @@ if not glfw.init():
     raise RuntimeError('Could not initialize GLFW')
 
 major, minor = version = (3, 2)
+glfw.window_hint(glfw.FOCUSED, False)
 glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, major)
 glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, minor)
 profile = glfw.OPENGL_ANY_PROFILE if version < (3, 2) else glfw.OPENGL_CORE_PROFILE

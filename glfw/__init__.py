@@ -165,7 +165,15 @@ def _wrap_func(ffi, func_decl, func):
         if retval in [ffi.NULL, []]:
             retval = None
         elif isinstance(retval, list):
-            retval = [l[0] for l in retval]
+            retval = [
+                ffi.string(l[0])
+                if isinstance(l[0], ffi.CData) and 'char' in ffi.typeof(l).cname
+                else l[0]
+                for l in retval
+            ]
+        if isinstance(retval, ffi.CData):
+            if 'char' in ffi.typeof(retval).cname:
+                retval = ffi.string(retval)
         return retval
 
     def rename_code_object(func, new_name):
@@ -518,9 +526,12 @@ def set_error_callback(func):
 ###############################################################################
 # Special helper functions
 ###############################################################################
-def cdata_to_pystring(cdata):
+def ffi_string(cdata):
     '''Converts char * cdata into a python string'''
-    return _ffi.string(cdata)
+    if isinstance(cdata, _ffi.CData):
+        if 'char' in _ffi.typeof(cdata).cname:
+            cdata = _ffi.string(cdata)
+    return cdata
 
 
 def get_key_string(key):
