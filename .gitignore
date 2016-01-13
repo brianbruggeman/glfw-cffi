@@ -55,3 +55,7 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# Virtual Environments
+venv*/
+.DS_Store

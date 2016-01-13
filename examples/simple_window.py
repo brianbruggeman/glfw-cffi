@@ -46,6 +46,8 @@ def main():
 
     monitor = glfw.get_primary_monitor()
     size = glfw.get_monitor_physical_size(monitor)
+    if size[-1] == 0:
+        size = (480, 640)
     ratio = size[0] / size[1]
     mode = glfw.get_video_mode(monitor)
     width, height = mode.width, mode.height

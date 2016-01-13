@@ -19,15 +19,18 @@ additionally follow these three criteria:
     your changes upstream, you'll submit a change request.  While this
     criteria is completely optional, please consider not being a dick.
 '''
-from setuptools import setup
+import os
 import re
+import sys
 
-pattern = '^__(?P<key>[0-9_A-Za-z]+)__\s+\=\s+[\'"]?(?P<value>.*)[\'"]?$'
-eng = re.compile(pattern)
+from setuptools import setup
+from setuptools.command.test import test as TestCommand
 
-top_folder = 'glfw'
-# Grab information without importing
-with open('{}/__init__.py'.format(top_folder), 'r') as fd:
+package_name = 'glfw'
+# Grab package information without importing
+with open('{}/__init__.py'.format(package_name), 'r') as fd:
+    pattern = '^__(?P<key>[0-9_A-Za-z]+)__\s+\=\s+[\'"]?(?P<value>.*)[\'"]?$'
+    eng = re.compile(pattern)
     data = {}
     for line in fd:
         if eng.search(line):
@@ -38,6 +41,47 @@ with open('{}/__init__.py'.format(top_folder), 'r') as fd:
                 value = value.rstrip("'")
             data[key] = value
 
+# Setup README documentation in RST format if pypandoc exists
+try:
+    import pypandoc
+    long_description = pypandoc.convert('README.md', 'rst')
+except ImportError:
+    with open('README.md', 'r') as fd:
+        long_description = fd.read()
+
+
+# Setup tests
+class PyTest(TestCommand):
+    test_package_name = package_name
+
+    def finalize_options(self):
+        TestCommand.finalize_options(self)
+        _test_args = [
+            '--verbose',
+            '--ignore=build',
+            '--cov={0}'.format(self.test_package_name),
+            '--cov-report=term-missing',
+            '--pep8',
+            '--flake8',
+            '--norecursedirs'
+            # error: error in setup.cfg: command 'PyTest' has no such option 'norecursedirs'
+        ]
+        extra_args = os.environ.get('PYTEST_EXTRA_ARGS')
+        if extra_args is not None:
+            _test_args.extend(extra_args.split())
+        self.test_args = _test_args
+        self.test_suite = True
+
+    def run_tests(self):
+        import pytest
+        errno = pytest.main(self.test_args)
+        sys.exit(errno)
+
+tests_require = [
+    'pytest',
+    'pytest-flake8',
+    'pytest-cov',
+]
 
 setup(
     name=data.get('title'),
@@ -45,10 +89,11 @@ setup(
     author=data.get('author'),
     author_email=data.get('email'),
     description=data.get('shortdesc'),
+    long_description=long_description,
     license=data.get('license'),
     url=data.get('url'),
     keywords='GLFW, CFFI',
-    packages=[top_folder],
+    packages=[package_name],
     package_data={'': ['*.h']},
     classifiers=[
         'Topic :: Multimedia :: Graphics',
@@ -58,11 +103,19 @@ setup(
         'Intended Audience :: Developers',
         'Intended Audience :: Education',
         'Development Status :: 3 - Alpha',
-        'License :: OSI Approved :: GNU General Public License (GPL)',
+        'License :: OSI Approved :: Apache Software License',
+        'License :: Other/Proprietary License',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: Implementation :: CPython'
         'Programming Language :: Python :: Implementation :: PyPy'
         ],
-    requires=['cffi']
+    install_requires=[
+        'cffi', 'pyopengl', 'docopt', 'freetype-py', 'numpy'
+    ],
+    setup_requires=['pytest-runner'],
+    tests_require=['pytest'],
+    test_suite='{}.test'.format(package_name),
+    cmdclass={'test': PyTest},
 )

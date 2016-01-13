@@ -13,45 +13,53 @@ branches:
         - develop
 os:
   - linux
-  # - osx
-  # - windows
 matrix:
   allow_failures:
-      - python: "3.5"
       - python: "3.5-dev"
       - python: "nightly"
-#     - os: osx
-#     # - os: linux
-#     - os: windows
-
-
-# Runs first
-install:
-    - pip install -r requirements.txt
-    - pip install .
 
 # Install system dependencies
+before_install:
+  # Update System
+  - sudo add-apt-repository 'deb http://us.archive.ubuntu.com/ubuntu/ wily main restricted universe multiverse'
+  - sudo add-apt-repository 'deb http://us.archive.ubuntu.com/ubuntu/ wily-updates main restricted universe multiverse'
+  - sudo apt-get update -qq
+
+  # Install dependencies
+  - sudo apt-get install -qq cmake g++-4.8 gcc-4.8 libglew-dev libfreetype6-dev libxrandr-dev libxrandr-dev libxinerama-dev libxcursor-dev freeglut3-dev libxxf86vm-dev libglu1-mesa-dev
+
+  # Install GLFW 3.1.2
+  - wget -O glfw-3.1.2.zip https://github.com/glfw/glfw/releases/download/3.1.2/glfw-3.1.2.zip
+  - unzip glfw-3.1.2.zip
+  - cd glfw-3.1.2
+  - cmake -DBUILD_SHARED_LIBS=ON -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF -DCMAKE_INSTALL_PREFIX=/usr -DLIB_SUFFIX=/x86_64-linux-gnu
+  - make
+  - sudo make install
+  - cd ..
+
+  # Install special pypy numpy for pypy compatibility or grab standard
+  - if [[ $TRAVIS_PYTHON_VERSION == 'pypy' ]]; then travis_retry pip install git+https://bitbucket.org/pypy/numpy.git@pypy-4.0.1; fi
+  - pip install -r requirements.txt
+
+  # glfw-cffi requires a working X11 display to run any tests
+  - "export DISPLAY=:99.0"
+  - "sh -e /etc/init.d/xvfb start"
+
+install:
+   - pip install -e .
+
 before_script:
-   # install GL related libs from utopic
-   - sudo add-apt-repository 'deb http://us.archive.ubuntu.com/ubuntu/ wily main restricted universe multiverse'
-   - sudo add-apt-repository 'deb http://us.archive.ubuntu.com/ubuntu/ wily-updates main restricted universe multiverse'
-   - sudo apt-get update -qq
-   - cmake --version
-   # remove existing cmake
-   - sudo dpkg -r cmake cmake-data
-   # install newer version
-   - sudo apt-get install -y cmake
-   - cmake --version
-   # install glut and xxf86vm (for GL libs)
-   - sudo apt-get install -y freeglut3-dev
-   - sudo apt-get install -y libxxf86vm-dev
-   # install GLEW
-   - sudo apt-get install -y libglew-dev
-   # install GLFW3
-   - sudo apt-get install -y libglfw3-dev
-   - sudo apt-get install -y tree
+  # Required for running a test
+  - pip install pytest
+  - pip install pytest-flake8
+  - pip install pytest-cov
+  # Required for coveralls
+  - pip install python-coveralls
 
 # command to run tests
 script:
-   # - tree `python -c 'import pip; import os; path = os.path.dirname(os.path.dirname(pip.__file__)); print(path)'`
-   - nosetests
+   # Run each separately so we have an idea of what's broken in travis
+   - py.test -s
+
+after_success:
+   - coveralls

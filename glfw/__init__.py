@@ -34,23 +34,24 @@ additionally follow these three criteria:
 '''
 from ctypes.util import find_library as _find_library
 import fnmatch
+import functools
 import imp
 import os
 import re
-import struct
 import sys
 
 from cffi import FFI
+import OpenGL.GL as _gl
 
 
-if sys.version[0] == 2:
+if sys.version.startswith('2'):
     range = xrange
 
 modname = os.path.basename(os.path.dirname(__file__))
 
 ###############################################################################
 __title__ = 'glfw-cffi'
-__version__ = '0.1.2-dev'
+__version__ = '0.1.8-dev'
 __author__ = 'Brian Bruggeman'
 __email__ = 'brian.m.bruggeman@gmail.com'
 __license__ = 'Apache 2.0'
@@ -61,10 +62,11 @@ __shortdesc__ = 'Foreign Function Interface wrapper for GLFW v3.x'
 
 ###############################################################################
 def _get_function_declaration(line):
+    '''Reads a line of C code and then extracts function declarations if found'''
     found = None
     pattern = ''.join((
-        r'^\s*(?P<result>([A-Za-z_0-9]+))\s+',
-        r'(?P<func_name>([A-Za-z_0-9]+))',
+        r'^\s*(?P<result>(.*))\s+',
+        r'(?P<func_name>(glfw[A-Za-z_0-9*]+))',
         r'\((?P<args>(.*))\)\;\s*$'
     ))
     eng = re.compile(pattern)
@@ -109,9 +111,7 @@ def _fix_source(data):
                 found = re.search('^(\s*)\#define\s+([0-9A-Za-z_]+)\s*(.*)$', line)
                 if found:
                     space, key, value = found.groups()
-                    if len(space) > 0:
-                        continue
-                    if value.startswith('__'):
+                    if ((len(space) > 0) or value.startswith('__')):
                         continue
                     elif value in defines:
                         old_value, value = value, defines[value]
@@ -119,10 +119,6 @@ def _fix_source(data):
                     defines[key] = value
         lines.append(line)
         prev_line = line
-    if 'GLFW_TRUE' not in defines:
-        lines.append('#define GLFW_TRUE 1')
-    if 'GLFW_FALSE' not in defines:
-        lines.append('#define GLFW_FALSE 0')
     return '\n'.join(lines)
 
 
@@ -133,42 +129,29 @@ def _wrap_func(ffi, func_decl, func):
     func_res = func_type.result
     decl_args = func_decl['args']
     func_fields = []
-    fields = set()
     for ctype, arg in zip(func_args, decl_args.split(',')):
         arg = arg.replace(ctype.cname, '').replace(ctype.cname.replace(' ', ''), '')
         arg = arg.strip()
+        arg = arg.split(' ')[-1]  # to capture the field name without the type data
         func_fields.append((arg, ctype))
-    fields = dict(func_fields)
+    # fields = dict(func_fields)
 
     # Auto-wrapper for cffi function call
+    @functools.wraps(func)
     def wrapper(*args, **kwds):
         retval = []
         if func_args:
             new_args = []
             func_kwds = {}
             for (fname, ftype), arg in zip(func_fields, args):
-                if not isinstance(arg, ffi.CData) and ftype.kind not in ['primitive']:
-                    farg = ffi.new(ftype.cname)
-                    farg[0] = arg
-                    arg = farg
                 func_kwds[fname] = arg
-            for kwd, val in kwds.items():
-                if kwd in fields:
-                    fname, ftype = fields[kwd]
-                    if not isinstance(val, ffi.CData) and ftype.kind not in ['primitive']:
-                        farg = ffi.new(ftype.cname)
-                        farg[0] = val
-                        val = farg
-                    func_kwds[fname] = val
             for name, ftype in func_fields:
                 val = func_kwds.get(name)
                 if val is None:
                     if ftype.kind == 'pointer':
-                        val = ffi.new(ftype.cname)
+                        val = ffi.new(ftype.cname, val)
                         func_kwds[name] = val
                         retval.append(val)
-                    else:
-                        val = ffi.NULL
                 new_args.append(val)
             if func_res.kind != 'void':
                 retval = func(*new_args)
@@ -182,7 +165,15 @@ def _wrap_func(ffi, func_decl, func):
         if retval in [ffi.NULL, []]:
             retval = None
         elif isinstance(retval, list):
-            retval = [l[0] for l in retval]
+            retval = [
+                ffi.string(l[0])
+                if isinstance(l[0], ffi.CData) and 'char' in ffi.typeof(l).cname
+                else l[0]
+                for l in retval
+            ]
+        if isinstance(retval, ffi.CData):
+            if 'char' in ffi.typeof(retval).cname:
+                retval = ffi.string(retval)
         return retval
 
     def rename_code_object(func, new_name):
@@ -190,30 +181,29 @@ def _wrap_func(ffi, func_decl, func):
         as the function'''
         code_object = func.__code__
         function, code = type(func), type(code_object)
-        import pdb; pdb.set_trace()
-        co_code = code_object.co_code
-        co_lnotab = code_object.co_lnotab
-        if sys.version.startswith('3'):
-            # co_code = int.from_bytes(co_code, byteorder=sys.byteorder)
-            # print('co_code: {}'.format(co_code))
-            co_lnotab = int.from_bytes(co_lnotab, byteorder=sys.byteorder)
-            print('co_lnotab: {}'.format(co_lnotab))
-        code_objects = (
+        code_objects = [
             code_object.co_argcount,
             code_object.co_nlocals,
             code_object.co_stacksize,
             code_object.co_flags,
-            co_code,
+            code_object.co_code,
             code_object.co_consts,
             code_object.co_names,
             code_object.co_varnames,
             code_object.co_filename,
             new_name,
             code_object.co_firstlineno,
-            co_lnotab,
+            code_object.co_lnotab,
             code_object.co_freevars,
             code_object.co_cellvars
-        )
+        ]
+        if sys.version.startswith('3'):
+            # CodeType changed between python2 and python3
+            code_objects.insert(1, code_object.co_kwonlyargcount)
+        # TODO: modify code *args, **kwds to use actual variables
+        # varnames = tuple(f[0] for f in func_fields)
+        # argcount = len(varnames)
+        # _display(code_object)
         new_func = function(
             code(*code_objects),
             func.__globals__, new_name, func.__defaults__, func.__closure__
@@ -225,53 +215,68 @@ def _wrap_func(ffi, func_decl, func):
 
     docstring = func.__doc__
     if not docstring:
+        docstring = '"{snake_name}" wrapps a glfw c-library function:.\n'
+        docstring += 'The c-function declaration can be found below:\n\n'
         if func_args:
             if func_res.kind != 'void':
-                docstring = '{result} {snake_name}({args})'.format(**func_decl)
+                docstring += '    {result} {func_name}({args})\n'
             else:
-                docstring = '{snake_name}({args})'.format(**func_decl)
+                docstring += '    void {func_name}({args})\n'
         else:
             if func_res.kind != 'void':
-                docstring = '{result} {snake_name}()'.format(**func_decl)
+                docstring += '    {result} {func_name}(void)\n'
             else:
-                docstring = '{snake_name}()'.format(**func_decl)
-    new_func.__doc__ = docstring
-    # wrapper.__name__ = func_decl['snake_name']
+                docstring += '    void {func_name}(void)\n'
+    new_func.__doc__ = docstring.format(**func_decl)
 
     return new_func
 
 
 def _camelToSnake(string):
-    '''Converts camelCase to snake_case'''
-    pass01 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', string)
-    final = re.sub('([a-z0-9])([A-Z])', r'\1_\2', pass01).lower()
-    return final
+    '''Converts camelCase to snake_case
 
-
-def get_include():
-    '''Returns header_path found during initialization'''
-    global header_path
-    include_path = header_path
-    if include_path is not None:
-        while include_path not in ['/', '']:
-            if include_path.split(os.path.sep)[-1] == 'include':
-                break
-            include_path = os.path.dirname(include_path)
-    return include_path
+    >>> print(_camelToSnake('ACase'))
+    a_case
+    >>> print(_camelToSnake('AnotherCaseHere'))
+    another_case_here
+    >>> print(_camelToSnake('AnotherCaseHereNow'))
+    another_case_here_now
+    >>> print(_camelToSnake('SimpleCase'))
+    simple_case
+    >>> print(_camelToSnake('simpleCase2'))
+    simple_case_2
+    >>> print(_camelToSnake('simpleCase3d'))
+    simple_case_3d
+    >>> print(_camelToSnake('simpleCase4D'))
+    simple_case_4_d
+    >>> print(_camelToSnake('simpleCase5thDimension'))
+    simple_case_5th_dimension
+    >>> print(_camelToSnake('simpleCase66thDimension'))
+    simple_case_66th_dimension
+    '''
+    patterns = [
+        (r'(.)([0-9]+)', r'\1_\2'),
+        # (r'(.)([A-Z][a-z]+)', r'\1_\2'),
+        # (r'(.)([0-9]+)([a-z]+)', r'\1_\2\3'),
+        (r'([a-z]+)([A-Z])', r'\1_\2'),
+    ]
+    engines = [
+        (pattern, replacement, re.compile(pattern))
+        for pattern, replacement in patterns
+    ]
+    for data in engines:
+        pattern, replacement, eng = data
+        string = eng.sub(replacement, string)
+    string = string.lower()
+    return string
 
 
 # Modifies the module directly by introspection and loading up glfw
 #  library and parsing glfw header file
 def _initialize_module(ffi):
-    glfw_library = None
+    glfw_library = os.environ.get('GLFW_LIBRARY', None)
 
-    # First if there is an environment variable pointing to the library
-    if 'GLFW_LIBRARY' in os.environ:
-        GLFW_LIBRARY = os.environ['GLFW_LIBRARY']
-        if os.path.exists():
-            glfw_library = os.path.realpath(GLFW_LIBRARY)
-
-    # Else, try to find it
+    # If no Environment variable, search for library
     if glfw_library is None:
         ordered_library_names = ['glfw3', 'glfw']
         for library_name in ordered_library_names:
@@ -280,8 +285,6 @@ def _initialize_module(ffi):
                 break
 
     # Else, we failed and exit
-    if glfw_library is None:
-        raise OSError('GLFW library not found')
     globals()['glfw_library'] = glfw_library
 
     # Look for the header being used
@@ -324,30 +327,33 @@ def _initialize_module(ffi):
     _glfw = ffi.dlopen(glfw_library)
 
     # Create python equivalents of glfw functions
-    funcs = {
+    camelCase = {
         _camelToSnake(d.replace('glfw', '')): getattr(_glfw, d)
         for d in dir(_glfw)
+        if hasattr(_glfw, d)
+        if not d.startswith('_')
         if hasattr(getattr(_glfw, d), '__call__')
     }
 
-    # Auto-wrap functions to make the friendly to Python
+    funcs = {
+        _camelToSnake(k.replace('glfw', '')): v
+        for k, v in camelCase.items()
+    }
+
+    # Auto-wrap functions to make them friendly to Python
     for line in source.split('\n'):
         func_decl = _get_function_declaration(line)
         if func_decl:
             snake_name = func_decl['snake_name']
             if snake_name in funcs:
-                try:
-                    some_func = funcs[snake_name]
-                    funcs[snake_name] = _wrap_func(ffi, func_decl, some_func)
-                except Exception as e:
-                    import traceback as tb;
-                    print(tb.format_exc(e))
-                    import pdb; pdb.set_trace()
-                    pass
+                some_func = funcs[snake_name]
+                funcs[snake_name] = _wrap_func(ffi, func_decl, some_func)
             else:
-                func = getattr(_glfw, func_decl['func_name'], None)
+                decl_func_name = func_decl['func_name']
+                func = getattr(_glfw, decl_func_name) if hasattr(_glfw, decl_func_name) else None
                 if func:
                     funcs[snake_name] = _wrap_func(ffi, func_decl, func)
+                    camelCase[decl_func_name] = func
 
     # Add functions to module
     globals().update(funcs)
@@ -364,45 +370,94 @@ def _initialize_module(ffi):
 
     # And finally keep the API the same for those that want to copy and
     #  paste from online C examples;  this is a straight pass-through
+    # camelCase = {}
+
     camelCase = {
         d: getattr(_glfw, d)
         for d in dir(_glfw)
+        if hasattr(_glfw, d)
     }
 
-    # Segregate python from cffi
+    easy_translate = {
+        _camelToSnake(d.replace('glfw', '')): getattr(_glfw, d)
+        for d in dir(_glfw)
+        if hasattr(_glfw, d)
+    }
+
+    # Core provides direct access to c-libraries rather than a wrapped function
     core = imp.new_module('core')
     sys.modules['{}.core'.format(modname)] = core
     core.__dict__.update(camelCase)
+    core.__dict__.update(easy_translate)
 
     # Add standard API to module.  Note the lack of wrapping
     globals()['core'] = core
+
+    # gl provides a snake_case python-esque interface to opengl
+    opengl_camelCase = {
+        d: getattr(_gl, d)
+        for d in dir(_gl)
+        if hasattr(_gl, d)
+    }
+
+    opengl_snake_case = {
+        _camelToSnake(d.replace('gl', '')): getattr(_gl, d)
+        for d in dir(_gl)
+        if hasattr(_gl, d)
+        if not d.upper() == d
+        if not d.startswith('GL_')
+    }
+
+    opengl_enums = {
+        d.replace('GL_', ''): getattr(_gl, d)
+        for d in dir(_gl)
+        if hasattr(_gl, d)
+        if d.upper() == d
+        if d.startswith('GL_')
+    }
+
+    gl = imp.new_module('gl')
+    sys.modules['{}.gl'.format(modname)] = gl
+    gl.__dict__.update(opengl_camelCase)
+    gl.__dict__.update(opengl_snake_case)
+    gl.__dict__.update(opengl_enums)
+
+    # Add standard API to module.  Note the lack of wrapping
+    globals()['gl'] = gl
 
     # Update decorators
     decorators = imp.new_module('decorators')
     sys.modules['{}.decorators'.format(modname)] = decorators
     decorators.__dict__.update(
         dict(
-            char_callback=ffi.callback('void (GLFWwindow*, unsigned int)'),
-            cursor_enter_callback=ffi.callback('void (GLFWwindow*, int)'),
-            cursor_pos_callback=ffi.callback('void (GLFWwindow*, double, double)'),
+            # Error callback
             error_callback=ffi.callback('void (int, const char*)'),
-            frame_buffersize_callback=ffi.callback('void (GLFWwindow*, int, int)'),
-            key_callback=ffi.callback('void (GLFWwindow*, int, int, int, int)'),
-            monitor_callback=ffi.callback('void (GLFWmonitor*, int)'),
-            mouse_button_callback=ffi.callback('void (GLFWwindow*, int, int, int)'),
+            # Text Input
+            char_callback=ffi.callback('void (GLFWwindow*, unsigned int)'),
+            char_mods_callback=ffi.callback('void (GLFWwindow*, unsigned int, int)'),
+            # Mouse Input
+            cursor_pos_callback=ffi.callback('void (GLFWwindow*, double, double)'),
             scroll_callback=ffi.callback('void (GLFWwindow*, double, double)'),
+            mouse_button_callback=ffi.callback('void (GLFWwindow*, int, int, int)'),
+            # Keyboard Input
+            key_callback=ffi.callback('void (GLFWwindow*, int, int, int, int)'),
+            # Window Callbacks
+            cursor_enter_callback=ffi.callback('void (GLFWwindow*, int)'),
+            framebuffer_size_callback=ffi.callback('void (GLFWwindow*, int, int)'),
             window_close_callback=ffi.callback('void (GLFWwindow*)'),
             window_focus_callback=ffi.callback('void (GLFWwindow*, int)'),
             window_iconify_callback=ffi.callback('void (GLFWwindow*, int)'),
             window_pos_callback=ffi.callback('void (GLFWwindow*, int, int)'),
             window_refresh_callback=ffi.callback('void (GLFWwindow*)'),
             window_size_callback=ffi.callback('void (GLFWwindow*, int, int)'),
+            # Misc Callbacks
+            drop_callback=ffi.callback('void (GLFWwindow* window, int, const char**)'),
+            monitor_callback=ffi.callback('void (GLFWmonitor*, int)'),
         )
     )
 
     # Add decorators module.  Note the lack of wrapping
     globals()['decorators'] = decorators
-
     return ffi, _glfw
 
 # Cleanup namespace
@@ -417,11 +472,22 @@ globals().pop('func')
 
 
 ###############################################################################
-# Hand written functions
+# Hand written GLFW-CFFI API
 ###############################################################################
-def create_window(width=640, height=480, title="Untitled", monitor=None, context=None):
-    '''Creates a window
+def get_include():
+    '''Returns header_path found during initialization'''
+    global header_path
+    include_path = header_path
+    if include_path is not None:
+        while include_path not in ['/', '']:
+            if include_path.split(os.path.sep)[-1] == 'include':
+                break
+            include_path = os.path.dirname(include_path)
+    return include_path
 
+
+def create_window(width=640, height=480, title="Untitled", monitor=None, share=None):
+    '''Creates a window
     Context is used when state from one window needs to be transferred
     to the new window.  A GlfwWindow * can be used for context.
     This is common when switching between full-screen and windowed
@@ -430,12 +496,14 @@ def create_window(width=640, height=480, title="Untitled", monitor=None, context
     '''
     if monitor is None:
         monitor = _ffi.NULL
-    if context is None:
-        context = _ffi.NULL
-    args = (width, height, title, monitor, context)
+    if share is None:
+        share = _ffi.NULL
+    if sys.version.startswith('3'):
+        farg = _ffi.new('char []', bytes(title.encode('utf-8')))
+        title = farg
+    args = (width, height, title, monitor, share)
     win = _glfw.glfwCreateWindow(*args)
     return win
-
 
 ###############################################################################
 # Special error handler callback
@@ -444,9 +512,54 @@ _error_callback_wrapper = None
 
 
 def set_error_callback(func):
+    '''Wraps the error callback function for GLFW and sets the callback function
+    for the entire program'''
+
     @decorators.error_callback
     def wrapper(error, description):
         return func(error, _ffi.string(description))
     global _error_callback_wrapper
     _error_callback_wrapper = wrapper
     _glfw.glfwSetErrorCallback(wrapper)
+
+
+###############################################################################
+# Special helper functions
+###############################################################################
+def ffi_string(cdata):
+    '''Converts char * cdata into a python string'''
+    if isinstance(cdata, _ffi.CData):
+        if 'char' in _ffi.typeof(cdata).cname:
+            cdata = _ffi.string(cdata)
+    return cdata
+
+
+def get_key_string(key):
+    '''Returns the name of a key'''
+    val = 'KEY_'
+    globs = dict(globals().items())
+    lookup = {v: k.replace(val, '').lower() for k, v in globs.items() if k.startswith(val)}
+    string = lookup.get(key, key)
+    return string
+
+
+def get_mod_string(mods):
+    '''Returns the name of a modifier'''
+    val = 'MOD_'
+    lookup = {v: k.replace(val, '').lower() for k, v in globals().items() if k.startswith(val)}
+    string = '+'.join(sorted({v for m, v in lookup.items() if m & mods}))
+    return string
+
+
+def get_mouse_button_string(button):
+    '''Returns the name of a modifier'''
+    val = 'MOUSE_BUTTON_'
+    lookup = {v: k.replace(val, '').lower() for k, v in sorted(globals().items()) if k.startswith(val)}
+    string = lookup.get(button, button)
+    return string
+
+
+def get_action_string(action):
+    '''Returns the name of a modifier'''
+    options = ['RELEASE', 'PRESS', 'REPEAT']
+    return {v: k.lower() for k, v in globals().items() if k in options}.get(action, action)
