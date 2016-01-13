@@ -2,9 +2,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
 import ctypes
+from collections import OrderedDict
 from random import random as rand
 from textwrap import dedent as dd
 from pprint import pprint as pp
+import sys
 
 import numpy as np
 import OpenGL
@@ -17,7 +19,7 @@ from glfw import gl
 # Data
 # ######################################################################
 title = 'OpenGL 4.1 Rendering'
-width, height = 640, 480
+width, height = 100, 75
 major, minor = (4, 1)
 draw_array = False
 use_data = True
@@ -50,11 +52,6 @@ pt = 0.5
 
 vertices = np.array([
     (x, y) for x in [-pt, 0, pt] for y in [-pt, 0, pt]
-    # (0.0, pt),
-    # (-pt, -pt),
-    # (pt, -pt),
-    # (pt, pt),
-    # (-pt, pt),
 ], dtype=np.float32)
 
 indices = np.array([
@@ -94,10 +91,6 @@ data = np.zeros(
 data['position'] = vertices
 data['color'] = colors
 
-for i, d in enumerate(data):
-    print(i, d)
-
-
 vshader = '''
     #version 410
 
@@ -122,7 +115,6 @@ fshader = '''
 
     void main () {
         frag_colour = vec4(v_color, 1.0);
-        // frag_colour = vec4(0.5, 1.0, 0.5, 1.0);
     }
     '''
 
@@ -140,7 +132,7 @@ def on_key(win, key, code, action, mods):
     global colors
     global data
     global use_data
-    if action in [glfw.PRESS]:
+    if action in [glfw.PRESS, glfw.REPEAT]:
         if key in [glfw.KEY_ESCAPE, glfw.KEY_Q]:
             # Quit
             glfw.core.set_window_should_close(win, gl.GL_TRUE)
@@ -159,28 +151,67 @@ def on_key(win, key, code, action, mods):
                 fill_index = fill_index + 1 if fill_index + 1 < len(fills) else 0
             print('New fill: {}'.format(fills[fill_index]))
         elif key == glfw.KEY_SPACE:
-            # Randomize colors
-            colors = np.array([
-                [rand() for _ in range(rgb)]  # vec3 of colors
-                for v in vertices  # one for every index
-            ], dtype=np.float32)
+            if mods & glfw.MOD_SHIFT:
+                colors = np.array([
+                    tuple(3*[0.5])
+                    for v in vertices
+                ], dtype=np.float32)
+            else:
+                # Randomize colors
+                colors = np.random.rand(len(vertices), 3)
             data['color'] = colors
-            print(data)
 
 
-def compile(shader):
-    '''Compiles a shader'''
+def create_program(vertex_shader, fragment_shader, geometry_shader=None,
+                   tesellation_evaluation=None, tesellation_control=None):
+    '''Compiles and links a program from the shaders provided'''
+    shaders = OrderedDict()
+    # Generate shaders from source
+    shaders['Vertex'] = gl.shader_source(gl.create_shader(gl.VERTEX_SHADER), vertex_shader)
+    shaders['Fragment'] = gl.shader_source(gl.create_shader(gl.FRAGMENT_SHADER), fragment_shader)
+    if geometry_shader is not None:
+        shader = gl.create_shader(gl.GEOMETRY_SHADER)
+        shaders['Geometry'] = gl.shader_source(gl.create_shader(gl.GEOMETRY_SHADER), geometry_shader)
+    if tesellation_evaluation is not None:
+        shader = gl.create_shader(gl.TESS_EVALUATION_SHADER)
+        shaders['Tessellation Evaluation'] = gl.shader_source(shader, tesellation_evaluation)
+    if tesellation_control is not None:
+        shader = gl.create_shader(gl.TESS_CONTROL_SHADER)
+        shaders['Tessellation Control'] = gl.shader_source(shader, tesellation_control)
 
-
-def compile_and_link_program(vertex_shader, fragment_shader, geometry_shader=None,
-                             tesellation_evaluation=None, tesellation_control=None):
-    '''Creates a program from the shaders provided'''
-    shaders = {
-        'v': gl.create_shader(gl.VERTEX_SHADER),
-        'f': gl.create_shader(gl.FRAGMENT_SHADER),
-    }
+    # Attach Shaders to program
     program = gl.create_program()
+    for shader_id, shader in shaders.items():
+        try:
+            gl.compile_shader(shader)
+            print('DEBUG: {} shader compiled successfully.'.format(shader_id))
+        except Exception as e:
+            print('ERROR: {} shader failed to compile'.format(shader_id))
+            for arg in e.args:
+                print(arg)
+            sys.exit()
+        result = gl.get_shader(shader, gl.COMPILE_STATUS)
+        log_length = gl.get_shaderiv(shader, gl.INFO_LOG_LENGTH)
+        if log_length > 0:
+            error_message = gl.get_shader_info_log(shader)
+            print('ERROR: [{}] Shader Compilation: {} | {}'.format(shader_id, error_message, result))
+        gl.attach_shader(program, shader)
 
+    # Link
+    gl.link_program(program)
+
+    # Check program linking
+    result = gl.glGetProgramiv(program, gl.LINK_STATUS)
+    log_length = gl.glGetProgramiv(program, gl.INFO_LOG_LENGTH)
+    if log_length > 0:
+        error_message = gl.glGetProgramInfoLog(program)
+        print('ERROR: Program Linking: {} | {}'.format(error_message, result))
+
+    # Detach and delete shaders
+    for shader_id, shader in shaders.items():
+        gl.detach_shader(program, shader)
+        gl.delete_shader(shader)
+    return program
 
 
 # ######################################################################
@@ -191,11 +222,10 @@ glfw.core.window_hint(glfw.CONTEXT_VERSION_MAJOR, major)
 glfw.core.window_hint(glfw.CONTEXT_VERSION_MINOR, minor)
 glfw.core.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
 glfw.core.window_hint(glfw.OPENGL_FORWARD_COMPAT, True)
-# glfw.core.window_hint(glfw.DECORATED, False)
-glfw.core.window_hint(glfw.RED_BITS, 8)
-glfw.core.window_hint(glfw.GREEN_BITS, 8)
-glfw.core.window_hint(glfw.BLUE_BITS, 8)
-glfw.core.window_hint(glfw.ALPHA_BITS, 8)
+glfw.core.window_hint(glfw.RED_BITS, 24)
+glfw.core.window_hint(glfw.GREEN_BITS, 24)
+glfw.core.window_hint(glfw.BLUE_BITS, 24)
+glfw.core.window_hint(glfw.ALPHA_BITS, 24)
 glfw.core.window_hint(glfw.DEPTH_BITS, 24)
 
 win = glfw.create_window(title=title, width=width, height=height)
@@ -207,11 +237,12 @@ gl.glDepthFunc(gl.GL_LESS)
 
 # Build pipeline
 program = gl.glCreateProgram()
+# program = create_program(dd(vshader), dd(fshader))
 vertex_shader = gl.glCreateShader(gl.GL_VERTEX_SHADER)
+gl.glShaderSource(vertex_shader, dd(vshader))
 fragment_shader = gl.glCreateShader(gl.GL_FRAGMENT_SHADER)
 
 # Build and compile Shaders
-gl.glShaderSource(vertex_shader, dd(vshader))
 gl.glShaderSource(fragment_shader, dd(fshader))
 
 gl.glCompileShader(vertex_shader)
