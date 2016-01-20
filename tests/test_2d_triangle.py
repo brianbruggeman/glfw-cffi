@@ -155,8 +155,8 @@ def test_shaders_2d_triangle():
     #  Keep the window invisible
     glfw.window_hint(glfw.VISIBLE, gl.GL_FALSE)
     # Generate a window anywhere on any monitor that's as small as possible
-    window = glfw.create_window(1, 1, 'Compatibility', ffi.NULL, ffi.NULL)
-    if window == ffi.NULL:
+    window = glfw.create_window(1, 1, 'Compatibility')
+    if window is None:
         pytest.skip("unsupported configuration")
     glfw.terminate()
     assert glfw.init() == glfw.gl.TRUE
