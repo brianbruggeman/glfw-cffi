@@ -78,14 +78,14 @@ def test_opengl_compatibility():
         version = major, minor
         try:
             # Request a specific version of opengl
-            glfw.window_hint(glfw.FOCUSED, False)
+            glfw.window_hint(glfw.FOCUSED, gl.GL_FALSE)
             glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, major)
             glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, minor)
             # Request a profile based on the version of opengl
             profile = glfw.OPENGL_ANY_PROFILE if version < (3, 2) else glfw.OPENGL_CORE_PROFILE
             glfw.window_hint(glfw.OPENGL_PROFILE, profile)
             # Setup forward compatibility if able
-            forward_compat = False if version < (3, 0) else True
+            forward_compat = gl.GL_FALSE if version < (3, 0) else gl.GL_TRUE
             glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, forward_compat)
             #  Keep the window invisible
             glfw.window_hint(glfw.VISIBLE, gl.GL_FALSE)
