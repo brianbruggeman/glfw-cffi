@@ -81,7 +81,6 @@ def test_shaders_2d_triangle():
     import numpy as np
     import glfw
     from glfw import gl
-    ffi = glfw._ffi
 
     width, height = (1, 1)
     title = 'Shader test'
