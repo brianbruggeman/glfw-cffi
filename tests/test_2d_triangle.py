@@ -156,7 +156,7 @@ def test_shaders_2d_triangle():
     # Generate a window anywhere on any monitor that's as small as possible
     window = glfw.create_window(1, 1, 'Compatibility')
     if window is None:
-        pytest.skip("unsupported configuration")
+        pytest.skip("OpenGL 4.1 is not supported.")
     glfw.terminate()
     assert glfw.init() == glfw.gl.TRUE
     glfw.window_hint(glfw.FOCUSED, False)
