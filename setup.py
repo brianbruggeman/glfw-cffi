@@ -112,7 +112,11 @@ setup(
         'Programming Language :: Python :: Implementation :: PyPy'
         ],
     install_requires=[
-        'cffi', 'pyopengl', 'docopt', 'freetype-py', 'numpy'
+        'cffi',
+        'pyopengl',
+        'docopt',
+        'freetype-py',
+        'numpy'
     ],
     setup_requires=['pytest-runner'],
     tests_require=['pytest'],
