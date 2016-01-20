@@ -20,17 +20,28 @@ def test_pre_init():
 
     @glfw.decorators.error_callback
     def error_callback(error, description):
-        pp('ERROR: {}: {}'.format(error, glfw._ffi.string(description)))
+        pass
 
     # These can be called before init
     assert glfw.set_error_callback(error_callback) is None
     glfw_version = glfw.get_version()
-    glfw_version_string = glfw.cdata_to_pystring(glfw.get_version_string())
-    pp("GLFW Version String: {}".format(glfw_version_string))
+    glfw_version_string = glfw.get_version_string()
     assert glfw_version is not None
     assert glfw_version_string.startswith(bytes('.'.join('{}'.format(v) for v in glfw_version).encode('utf-8')))
     assert glfw.init() != 0
     assert glfw.terminate() is None
+
+
+def test_basic_package_functions():
+    '''Runs tests on basic package information that is available to the
+    end user
+    '''
+    import glfw
+    assert glfw.get_include() is not None
+    assert glfw.get_key_string(glfw.KEY_A) == 'a'
+    assert glfw.get_mod_string(glfw.MOD_SHIFT) == 'shift'
+    assert glfw.get_mouse_button_string(glfw.MOUSE_BUTTON_LEFT) == 'left'
+    assert glfw.get_action_string(glfw.RELEASE) == 'release'
 
 
 def test_basic_window():
@@ -38,7 +49,9 @@ def test_basic_window():
     import glfw
     assert glfw.init() == glfw.gl.TRUE
     width, height = (1, 1)
+    glfw.window_hint(glfw.FOCUSED, False)
     win = glfw.create_window(title='Simple window', width=width, height=height)
+    assert win != glfw._ffi.NULL
     for x in range(2):
         assert glfw.swap_buffers(win) is None
         assert glfw.poll_events() is None
@@ -65,13 +78,14 @@ def test_opengl_compatibility():
         version = major, minor
         try:
             # Request a specific version of opengl
+            glfw.window_hint(glfw.FOCUSED, gl.GL_FALSE)
             glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, major)
             glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, minor)
             # Request a profile based on the version of opengl
             profile = glfw.OPENGL_ANY_PROFILE if version < (3, 2) else glfw.OPENGL_CORE_PROFILE
             glfw.window_hint(glfw.OPENGL_PROFILE, profile)
             # Setup forward compatibility if able
-            forward_compat = False if version < (3, 0) else True
+            forward_compat = gl.GL_FALSE if version < (3, 0) else gl.GL_TRUE
             glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, forward_compat)
             #  Keep the window invisible
             glfw.window_hint(glfw.VISIBLE, gl.GL_FALSE)
@@ -108,7 +122,20 @@ def test_opengl_compatibility():
                 line = '{}'.format(line)
                 print('ERROR: ' + line, file=sys.stderr)
 
-    pp(opengl_info)
+    glfw_version_string = glfw.get_version_string()
+    pp('')
+    pp("GLFW Version String: {}".format(glfw_version_string))
+    pp('OpenGL Version: {}'.format(opengl_info['version']))
+    pp('OpenGL Vendor: {}'.format(opengl_info['vendor']))
+    pp('OpenGL Renderer: {}'.format(opengl_info['renderer']))
+    pp('OpenGL GLSL Supported: {}'.format(opengl_info['GLSL']))
+    if 'extensions' in opengl_info:
+        for extension in opengl_info.get('extensions'):
+            pp('OpenGL Extension: {}'.format(extension))
+    if 'glsl_supported' in opengl_info:
+        for glsl in opengl_info.get('extensions'):
+            if glsl != opengl_info['GLSL']:
+                pp('OpenGL GLSL Supported: {}'.format(glsl))
     assert glfw.terminate() is None
     assert opengl_version in versions
 

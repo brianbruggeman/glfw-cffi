@@ -44,14 +44,14 @@ from cffi import FFI
 import OpenGL.GL as _gl
 
 
-if sys.version[0] == 2:
+if sys.version.startswith('2'):
     range = xrange
 
 modname = os.path.basename(os.path.dirname(__file__))
 
 ###############################################################################
 __title__ = 'glfw-cffi'
-__version__ = '0.1.7'
+__version__ = '0.1.8'
 __author__ = 'Brian Bruggeman'
 __email__ = 'brian.m.bruggeman@gmail.com'
 __license__ = 'Apache 2.0'
@@ -61,15 +61,6 @@ __shortdesc__ = 'Foreign Function Interface wrapper for GLFW v3.x'
 
 
 ###############################################################################
-def _display(object):
-    '''Purely for debugging'''
-    for d in dir(object):
-        try:
-            print('{}: {}'.format(d, getattr(object, d)))
-        except TypeError:
-            print('{}: type error'.format(d))
-
-
 def _get_function_declaration(line):
     '''Reads a line of C code and then extracts function declarations if found'''
     found = None
@@ -120,9 +111,7 @@ def _fix_source(data):
                 found = re.search('^(\s*)\#define\s+([0-9A-Za-z_]+)\s*(.*)$', line)
                 if found:
                     space, key, value = found.groups()
-                    if len(space) > 0:
-                        continue
-                    if value.startswith('__'):
+                    if ((len(space) > 0) or value.startswith('__')):
                         continue
                     elif value in defines:
                         old_value, value = value, defines[value]
@@ -130,10 +119,6 @@ def _fix_source(data):
                     defines[key] = value
         lines.append(line)
         prev_line = line
-    if 'GLFW_TRUE' not in defines:
-        lines.append('#define GLFW_TRUE 1')
-    if 'GLFW_FALSE' not in defines:
-        lines.append('#define GLFW_FALSE 0')
     return '\n'.join(lines)
 
 
@@ -149,7 +134,7 @@ def _wrap_func(ffi, func_decl, func):
         arg = arg.strip()
         arg = arg.split(' ')[-1]  # to capture the field name without the type data
         func_fields.append((arg, ctype))
-    fields = dict(func_fields)
+    # fields = dict(func_fields)
 
     # Auto-wrapper for cffi function call
     @functools.wraps(func)
@@ -159,26 +144,7 @@ def _wrap_func(ffi, func_decl, func):
             new_args = []
             func_kwds = {}
             for (fname, ftype), arg in zip(func_fields, args):
-                if not isinstance(arg, ffi.CData) and ftype.kind not in ['primitive']:
-                    farg = ffi.new(ftype.cname)
-                    farg[0] = arg
-                    arg = farg
                 func_kwds[fname] = arg
-            for kwd, val in kwds.items():
-                if kwd in fields:
-                    try:
-                        fname, ftype = fields[kwd]
-                    except TypeError:
-                        fname = kwd
-                        ftype = fields[kwd]
-                    if not isinstance(val, ffi.CData) and ftype.kind not in ['primitive']:
-                        if ftype.cname == 'char *':
-                            farg = ffi.new('char[]', val)
-                        else:
-                            farg = ffi.new(ftype.cname)
-                            farg[0] = val
-                        val = farg
-                    func_kwds[fname] = val
             for name, ftype in func_fields:
                 val = func_kwds.get(name)
                 if val is None:
@@ -186,8 +152,6 @@ def _wrap_func(ffi, func_decl, func):
                         val = ffi.new(ftype.cname, val)
                         func_kwds[name] = val
                         retval.append(val)
-                    else:
-                        val = ffi.NULL
                 new_args.append(val)
             if func_res.kind != 'void':
                 retval = func(*new_args)
@@ -201,7 +165,15 @@ def _wrap_func(ffi, func_decl, func):
         if retval in [ffi.NULL, []]:
             retval = None
         elif isinstance(retval, list):
-            retval = [l[0] for l in retval]
+            retval = [
+                ffi.string(l[0])
+                if isinstance(l[0], ffi.CData) and 'char' in ffi.typeof(l).cname
+                else l[0]
+                for l in retval
+            ]
+        if isinstance(retval, ffi.CData):
+            if 'char' in ffi.typeof(retval).cname:
+                retval = ffi.string(retval)
         return retval
 
     def rename_code_object(func, new_name):
@@ -302,15 +274,9 @@ def _camelToSnake(string):
 # Modifies the module directly by introspection and loading up glfw
 #  library and parsing glfw header file
 def _initialize_module(ffi):
-    glfw_library = None
+    glfw_library = os.environ.get('GLFW_LIBRARY', None)
 
-    # First if there is an environment variable pointing to the library
-    if 'GLFW_LIBRARY' in os.environ:
-        GLFW_LIBRARY = os.environ['GLFW_LIBRARY']
-        if os.path.exists():
-            glfw_library = os.path.realpath(GLFW_LIBRARY)
-
-    # Else, try to find it
+    # If no Environment variable, search for library
     if glfw_library is None:
         ordered_library_names = ['glfw3', 'glfw']
         for library_name in ordered_library_names:
@@ -319,8 +285,6 @@ def _initialize_module(ffi):
                 break
 
     # Else, we failed and exit
-    if glfw_library is None:
-        raise OSError('GLFW library not found')
     globals()['glfw_library'] = glfw_library
 
     # Look for the header being used
@@ -363,28 +327,20 @@ def _initialize_module(ffi):
     _glfw = ffi.dlopen(glfw_library)
 
     # Create python equivalents of glfw functions
-    funcs = {}
-    camelCase = {}
-    for d in dir(_glfw):
-        if d.startswith('_'):
-            continue
-        func_name = _camelToSnake(d.replace('glfw', ''))
-        try:
-            func = getattr(_glfw, d)  # TODO: why doesn't this work on ubuntu?
-        except AttributeError:
-            continue
-        if hasattr(func, '__call__'):
-            funcs[func_name] = func
-            camelCase[d] = func
-    # TODO: This elegance should not die...
-    # funcs = {
-    #     _camelToSnake(d.replace('glfw', '')): getattr(_glfw, d)
-    #     for d in dir(_glfw)
-    #     if not d.startswith('_')
-    #     if hasattr(getattr(_glfw, d), '__call__')
-    # }
+    camelCase = {
+        _camelToSnake(d.replace('glfw', '')): getattr(_glfw, d)
+        for d in dir(_glfw)
+        if hasattr(_glfw, d)
+        if not d.startswith('_')
+        if hasattr(getattr(_glfw, d), '__call__')
+    }
 
-    # Auto-wrap functions to make the friendly to Python
+    funcs = {
+        _camelToSnake(k.replace('glfw', '')): v
+        for k, v in camelCase.items()
+    }
+
+    # Auto-wrap functions to make them friendly to Python
     for line in source.split('\n'):
         func_decl = _get_function_declaration(line)
         if func_decl:
@@ -394,10 +350,7 @@ def _initialize_module(ffi):
                 funcs[snake_name] = _wrap_func(ffi, func_decl, some_func)
             else:
                 decl_func_name = func_decl['func_name']
-                try:
-                    func = getattr(_glfw, decl_func_name, None)
-                except AttributeError:
-                    continue
+                func = getattr(_glfw, decl_func_name) if hasattr(_glfw, decl_func_name) else None
                 if func:
                     funcs[snake_name] = _wrap_func(ffi, func_decl, func)
                     camelCase[decl_func_name] = func
@@ -550,6 +503,8 @@ def create_window(width=640, height=480, title="Untitled", monitor=None, share=N
         title = farg
     args = (width, height, title, monitor, share)
     win = _glfw.glfwCreateWindow(*args)
+    if win == _ffi.NULL:
+        win = None
     return win
 
 ###############################################################################
@@ -573,9 +528,12 @@ def set_error_callback(func):
 ###############################################################################
 # Special helper functions
 ###############################################################################
-def cdata_to_pystring(cdata):
+def ffi_string(cdata):
     '''Converts char * cdata into a python string'''
-    return _ffi.string(cdata)
+    if isinstance(cdata, _ffi.CData):
+        if 'char' in _ffi.typeof(cdata).cname:
+            cdata = _ffi.string(cdata)
+    return cdata
 
 
 def get_key_string(key):

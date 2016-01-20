@@ -103,7 +103,8 @@ setup(
         'Intended Audience :: Developers',
         'Intended Audience :: Education',
         'Development Status :: 3 - Alpha',
-        'License :: OSI Approved :: GNU General Public License (GPL)',
+        'License :: OSI Approved :: Apache Software License',
+        'License :: Other/Proprietary License',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.5',
@@ -111,10 +112,14 @@ setup(
         'Programming Language :: Python :: Implementation :: PyPy'
         ],
     install_requires=[
-        'cffi', 'pyopengl', 'docopt', 'freetype-py', 'numpy'
+        'cffi',
+        'pyopengl',
+        'docopt',
+        'freetype-py',
+        'numpy'
     ],
     setup_requires=['pytest-runner'],
-    tests_require=['pytest'],
+    tests_require=tests_require,
     test_suite='{}.test'.format(package_name),
     cmdclass={'test': PyTest},
 )

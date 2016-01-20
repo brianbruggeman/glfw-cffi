@@ -41,6 +41,7 @@ def get_opengl_compatibility(logger=None):
 
     for major, minor in versions:
         try:
+            glfw.window_hint(glfw.FOCUSED, gl.GL_FALSE)
             glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, major)
             glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, minor)
             glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
