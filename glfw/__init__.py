@@ -503,6 +503,8 @@ def create_window(width=640, height=480, title="Untitled", monitor=None, share=N
         title = farg
     args = (width, height, title, monitor, share)
     win = _glfw.glfwCreateWindow(*args)
+    if win == _ffi.NULL:
+        win = None
     return win
 
 ###############################################################################
