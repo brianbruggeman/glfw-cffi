@@ -119,7 +119,7 @@ setup(
         'numpy'
     ],
     setup_requires=['pytest-runner'],
-    tests_require=['pytest'],
+    tests_require=tests_require,
     test_suite='{}.test'.format(package_name),
     cmdclass={'test': PyTest},
 )

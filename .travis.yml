@@ -59,7 +59,7 @@ before_script:
 # command to run tests
 script:
    # Run each separately so we have an idea of what's broken in travis
-   - py.test -s
+   - py.test tests/
 
 after_success:
    - coveralls
