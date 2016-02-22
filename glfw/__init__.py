@@ -385,7 +385,7 @@ def _initialize_module(ffi):
         Update GLFW_LIBRARY environment variable with path to library binary.
         '''.format(glfw_library_path))
         raise RuntimeError(err)
-    globals()['glfw_library'] = glfw_path
+    globals()['library_path'] = glfw_path
 
     # Find and load library header
     header_path, source = _find_library_header('glfw3', glfw_path, ffi)
