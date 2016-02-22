@@ -2,11 +2,12 @@ sudo: required
 language: python
 dist: trusty  # wily
 python:
+    - "pypy"
     - "2.7"
     - "3.5"
     - "3.5-dev" # 3.5 development branch
     - "nightly" # currently points to 3.6-dev
-    - "pypy"
+
 branches:
     only:
         - master
@@ -14,6 +15,7 @@ branches:
 os:
   - linux
 matrix:
+  fast_finish: true
   allow_failures:
       - python: "3.5-dev"
       - python: "nightly"
