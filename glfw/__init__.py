@@ -52,7 +52,7 @@ modname = os.path.basename(os.path.dirname(__file__))
 
 ###############################################################################
 __title__ = 'glfw-cffi'
-__version__ = '0.1.10'
+__version__ = '0.1.11'
 __author__ = 'Brian Bruggeman'
 __email__ = 'brian.m.bruggeman@gmail.com'
 __license__ = 'Apache 2.0'
@@ -294,8 +294,9 @@ def _load_library(library_path, ffi):
 
 def _find_library(library_name, ffi, path=None):
     '''Attempts to find and and load library name given path'''
-    path = os.path.abspath(os.getcwd()) if path is None else os.path.abspath(path)
+    path = os.getcwd() if path is None else path
     path = path.strip('"')
+    path = os.path.abspath(path)
     # Try three different methods
 
     # First try loading the path
