@@ -294,8 +294,9 @@ def _load_library(library_path, ffi):
 
 def _find_library(library_name, ffi, path=None):
     '''Attempts to find and and load library name given path'''
-    path = os.path.abspath(os.getcwd()) if path is None else os.path.abspath(path)
+    path = os.getcwd() if path is None else path
     path = path.strip('"')
+    path = os.path.abspath(path)
     # Try three different methods
 
     # First try loading the path
