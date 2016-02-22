@@ -77,11 +77,24 @@ class PyTest(TestCommand):
         errno = pytest.main(self.test_args)
         sys.exit(errno)
 
+install_requires = [
+    'cffi',
+    'pyopengl',
+]
+
+examples_require = [
+    'docopt',
+    'freetype-py',
+    'numpy'
+]
+
 tests_require = [
     'pytest',
     'pytest-flake8',
     'pytest-cov',
+    'pytest-xdist'
 ]
+
 
 setup(
     name=data.get('title'),
@@ -111,13 +124,11 @@ setup(
         'Programming Language :: Python :: Implementation :: CPython'
         'Programming Language :: Python :: Implementation :: PyPy'
         ],
-    install_requires=[
-        'cffi',
-        'pyopengl',
-        'docopt',
-        'freetype-py',
-        'numpy'
-    ],
+    install_requires=install_requires,
+    extras_require={
+        'examples': examples_require,
+        'tests': tests_require,
+    },
     setup_requires=['pytest-runner'],
     tests_require=tests_require,
     test_suite='{}.test'.format(package_name),

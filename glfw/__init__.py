@@ -32,13 +32,14 @@ additionally follow these three criteria:
     your changes upstream, you'll submit a change request.  While this
     criteria is completely optional, please consider not being a dick.
 '''
-from ctypes.util import find_library as _find_library
+from ctypes.util import find_library as _ctypes_find_library
 import fnmatch
 import functools
 import imp
 import os
 import re
 import sys
+from textwrap import dedent as dd
 
 from cffi import FFI
 import OpenGL.GL as _gl
@@ -271,60 +272,130 @@ def _camelToSnake(string):
     return string
 
 
-# Modifies the module directly by introspection and loading up glfw
-#  library and parsing glfw header file
-def _initialize_module(ffi):
-    glfw_library = os.environ.get('GLFW_LIBRARY', None)
+def _load_header(header_path, ffi):
+    '''Loads a header file'''
+    source = ''
+    with open(header_path, 'r') as fd:
+        source = _fix_source(fd.read())
+    ffi.cdef(source)
+    return source
 
-    # If no Environment variable, search for library
-    if glfw_library is None:
-        ordered_library_names = ['glfw3', 'glfw']
-        for library_name in ordered_library_names:
-            glfw_library = _find_library(library_name)
-            if glfw_library is not None:
-                break
 
-    # Else, we failed and exit
-    globals()['glfw_library'] = glfw_library
+def _load_library(library_path, ffi):
+    '''Loads a library file given a path'''
+    try:
+        lib = ffi.dlopen(library_path)
+    except Exception as e:
+        import traceback as tb
+        print(tb.format_exc(e))
+        lib = None
+    return lib
 
-    # Look for the header being used
-    include_found = False
-    include_path = glfw_library
-    while include_path not in ['/', '']:
+
+def _find_library(library_name, ffi, path=None):
+    '''Attempts to find and and load library name given path'''
+    path = os.path.abspath(os.getcwd()) if path is None else os.path.abspath(path)
+    path = path.strip('"')
+    # Try three different methods
+
+    # First try loading the path
+    if os.path.exists(path):
+        if os.path.isfile(path):
+            lib = _load_library(path, ffi)
+            if lib:
+                return lib, path
+
+    # Next try ctypes find library
+    if not isinstance(library_name, (tuple, list)):
+        library_name = [library_name]
+    for libname in library_name:
+        lib_path = _ctypes_find_library(libname)
+        if lib_path:
+            lib = _load_library(lib_path, ffi)
+            if lib:
+                lib_path = os.path.abspath(lib_path)
+                return lib, lib_path
+
+    # Finally try a brute force method based on path
+    lib_exts = ('dll', 'so')
+    for root, folders, files in os.walk(path):
+        for filename in files:
+            if filename.startswith(library_name) and filename.endswith(lib_exts):
+                filepath = os.path.join(root, filename)
+                lib = _load_library(filepath, ffi)
+                if lib:
+                    return lib, filepath
+
+    # Otherwise return nothing
+    return (None, '')
+
+
+def _find_library_header(library_name, library_path, ffi):
+    '''Attempts to find and load a header file relative to the library path'''
+    split_drive = lambda path: os.path.splitdrive(path)[-1]  # for windows
+    empty_paths = [os.path.sep, '', None]
+    include_path = library_path
+    include_path_found = False
+    while split_drive(include_path) and split_drive(include_path) not in empty_paths:
         if os.path.isdir(include_path):
-            if 'include' in os.listdir(include_path):
-                include_found = True
+            file_list = [
+                folder_object
+                for folder_object in os.listdir(include_path)
+                if (fnmatch.fnmatch(folder_object, 'glfw*.h') or
+                    'include' in folder_object)
+            ]
+            if file_list:
                 break
-        if not include_found:
+        if not include_path_found:
             include_path = os.path.dirname(include_path)
-
-    header_path = None
+    header_path = ''
+    header_path_found = False
+    source = ''
     for root, folders, files in os.walk(include_path):
+        folders = [folder for folder in folders if folder == 'include']
         for filename in sorted(files):
             filepath = os.path.join(root, filename)
             if 'include' not in filepath:
                 continue
-            if 'glfw' not in filepath.lower():
+            if library_name not in filepath.lower():
                 continue
             if fnmatch.fnmatch(filename, 'glfw*.h'):
                 header_path = filepath
+                header_path_found = True
+                source = _load_header(header_path, ffi)
                 break
-        if header_path:
+        if header_path_found:
             break
+    return header_path, source
 
-    # If library header was not found, then use the one provided in repo
-    if header_path is None:
-        source_path = os.path.dirname(__file__)
-        header_path = os.path.join(source_path, 'glfw3.h')
 
+# Modifies the module directly by introspection and loading up glfw
+#  library and parsing glfw header file
+def _initialize_module(ffi):
+    glfw_library_path = os.environ.get('GLFW_LIBRARY', None)
+    # Find and load library using GLFW_LIBRARY hint
+    # glfw is often used on linux, mac and windows use glfw3
+    library_names = ('glfw3', 'glfw')
+    _glfw, glfw_path = _find_library(library_names, ffi, glfw_library_path)
+    if not _glfw:
+        err = dd('''
+        Could not find glfw library.
+        GLFW_LIBRARY = "{}"
+        Update GLFW_LIBRARY environment variable with path to library binary.
+        '''.format(glfw_library_path))
+        raise RuntimeError(err)
+    globals()['glfw_library'] = glfw_path
+
+    # Find and load library header
+    header_path, source = _find_library_header('glfw3', glfw_path, ffi)
+    if not header_path:
+        err = dd('''
+        Could not find glfw library include files.  They must exist within
+        an "include" library near the glfw library binary.
+        GLFW Path = "{}"
+        '''.format(glfw_path))
+        raise RuntimeError(err)
     globals()['header_path'] = header_path
-    # Parse header
-    with open(header_path, 'r') as f:
-        source = _fix_source(f.read())
-    ffi.cdef(source)
-
-    # Create the direct c-library instance for glfw3
-    _glfw = ffi.dlopen(glfw_library)
 
     # Create python equivalents of glfw functions
     camelCase = {
@@ -564,4 +635,5 @@ def get_mouse_button_string(button):
 def get_action_string(action):
     '''Returns the name of a modifier'''
     options = ['RELEASE', 'PRESS', 'REPEAT']
-    return {v: k.lower() for k, v in globals().items() if k in options}.get(action, action)
+    data = {v: k.lower() for k, v in globals().items() if k in options}
+    return data.get(action, action)

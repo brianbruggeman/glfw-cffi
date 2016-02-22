@@ -68,13 +68,33 @@ GLFW3 is available for several different platforms:
 - Ubuntu/Debian: `sudo apt-get install -y libglfw3-dev`
 - Fedora/Red Hat: `sudo yum install -y libglfw3-dev`
 - Mac OS X with Homebrew: `brew install glfw3`
-- Windows: There is an installer available
+- Windows: There is are pre-compiled binaries available
   [64-bit Windows](https://github.com/glfw/glfw/releases/download/3.1.2/glfw-3.1.2.bin.WIN64.zip) or
   [32-bit Windows](https://github.com/glfw/glfw/releases/download/3.1.2/glfw-3.1.2.bin.WIN32.zip)
 
 GLFW3 is relatively new, so some older installations of Linux may not have
 `libglfw` directly available.  You may check out the [travis.yml](https://github.com/brianbruggeman/glfw-cffi/blob/master/.travis.yml#L34-L52)
 file within our github repo for more information on setup on older systems.
+
+#### A special note for installing GLFW3 on Windows
+
+The current state requires that an environment variable, 'GLFW_LIBRARY', be set
+and pointing to a compiled .dll found within a known path.  In addition,
+glfw-cffi expects that a header file be present within an 'include' folder
+within the same folder structure as the .dll.  So for example, if the
+library binary were added to:
+
+    C:\GLFW\lib\glfw3.dll
+
+The python library, glfw-cffi, would search for a glfw3.h file within any of
+these folders:
+
+    C:\GLFW\lib\include
+    C:\GLFW\include
+    C:\include
+
+When testing, we used the 32-bit binary and lib-mingw on a 64-bit Windows 10
+system.
 
 ## Usage:
 
