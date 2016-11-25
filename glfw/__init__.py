@@ -102,6 +102,13 @@ def _fix_source(data):
             continue
         if line.lstrip(' ').startswith('GLFWAPI'):
             line = line.replace('GLFWAPI ', '')
+        # TODO: Figure out how to add Vulkan support, but until then...
+        # Won't support Vulkan at this point.
+        vulkan_keys = [
+            'GLFWvkproc', 'VkInstance', 'VkPhysicalDevice'
+        ]
+        if any(key in line for key in vulkan_keys):
+            continue
         if prev_line == '#ifdef __cplusplus':
             if line.strip() == '}':
                 prev_line = line
