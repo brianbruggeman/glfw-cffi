@@ -1,5 +1,5 @@
 include requirements.txt
-include README.md
+include README.*
 include *.ini
 include *.cfg
 recursive-include glfw *

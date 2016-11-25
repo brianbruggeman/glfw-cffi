@@ -46,19 +46,22 @@ import OpenGL.GL as _gl
 
 
 if sys.version.startswith('2'):
-    range = xrange
+    range = xrange  # noqa
 
 modname = os.path.basename(os.path.dirname(__file__))
 
 ###############################################################################
-__title__ = 'glfw-cffi'
-__version__ = '0.1.11'
-__author__ = 'Brian Bruggeman'
-__email__ = 'brian.m.bruggeman@gmail.com'
+
+__project__ = 'glfw-cffi'
+__shortdoc__ = 'Foreign Function Interface wrapper for GLFW v3.x'
 __license__ = 'Apache 2.0'
+__version_str__ = '0.2.0'
+__version__ = tuple((int(v.split('-')[0]) for v in __version_str__.split('.')))
+
+__author__ = 'Brian Bruggeman'
 __copyright__ = 'Copyright 2016 Brian Bruggeman'
+__email__ = 'brian.m.bruggeman@gmail.com'
 __url__ = 'https://github.com/brianbruggeman/glfw-cffi.git'
-__shortdesc__ = 'Foreign Function Interface wrapper for GLFW v3.x'
 
 
 ###############################################################################
@@ -100,6 +103,13 @@ def _fix_source(data):
             continue
         if line.lstrip(' ').startswith('GLFWAPI'):
             line = line.replace('GLFWAPI ', '')
+        # TODO: Figure out how to add Vulkan support, but until then...
+        # Won't support Vulkan at this point.
+        vulkan_keys = [
+            'GLFWvkproc', 'VkInstance', 'VkPhysicalDevice'
+        ]
+        if any(key in line for key in vulkan_keys):
+            continue
         if prev_line == '#ifdef __cplusplus':
             if line.strip() == '}':
                 prev_line = line
@@ -273,7 +283,15 @@ def _camelToSnake(string):
 
 
 def _load_header(header_path, ffi):
-    '''Loads a header file'''
+    '''Loads a header file
+
+    Args:
+        header_path(str):  String to header file
+        ffi(cffi.FFI):  FFI instance
+
+    Returns:
+        str: compiled string source
+    '''
     source = ''
     with open(header_path, 'r') as fd:
         source = _fix_source(fd.read())
@@ -333,7 +351,8 @@ def _find_library(library_name, ffi, path=None):
 
 def _find_library_header(library_name, library_path, ffi):
     '''Attempts to find and load a header file relative to the library path'''
-    split_drive = lambda path: os.path.splitdrive(path)[-1]  # for windows
+    # Specialty code for windows.  Most elegant to implement with a lambda
+    split_drive = lambda path: os.path.splitdrive(path)[-1]  # noqa
     empty_paths = [os.path.sep, '', None]
     include_path = library_path
     include_path_found = False
@@ -385,7 +404,7 @@ def _initialize_module(ffi):
         Update GLFW_LIBRARY environment variable with path to library binary.
         '''.format(glfw_library_path))
         raise RuntimeError(err)
-    globals()['glfw_library'] = glfw_path
+    globals()['library_path'] = glfw_path
 
     # Find and load library header
     header_path, source = _find_library_header('glfw3', glfw_path, ffi)
@@ -532,6 +551,7 @@ def _initialize_module(ffi):
     globals()['decorators'] = decorators
     return ffi, _glfw
 
+
 # Cleanup namespace
 _ffi, _glfw = _initialize_module(FFI())
 globs = {k: v for k, v in globals().items()}
@@ -579,6 +599,7 @@ def create_window(width=640, height=480, title="Untitled", monitor=None, share=N
         win = None
     return win
 
+
 ###############################################################################
 # Special error handler callback
 ###############################################################################
@@ -589,7 +610,9 @@ def set_error_callback(func):
     '''Wraps the error callback function for GLFW and sets the callback function
     for the entire program'''
 
-    @decorators.error_callback
+    # decorators is actually created in a hacky way (see: _initialize_module)
+    # This may flub any static checking, but it still runs
+    @decorators.error_callback  # noqa
     def wrapper(error, description):
         return func(error, _ffi.string(description))
     global _error_callback_wrapper
