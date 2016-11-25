@@ -103,26 +103,29 @@ def get_package_metadata(project_name=None):
     metadata = {}
     for root, folder, files in os.walk(top_folder):
         for filename in files:
-            if filename == '__init__.py':
-                filepath = os.path.join(root, filename)
-                with open(filepath, 'r') as fd:
-                    for line in fd:
-                        for data in [m.groupdict() for m in engine.finditer(line)]:
-                            try:
-                                data['value'] = eval(data['value'], metadata, metadata)
-                            except Exception as e:
-                                print(e)
-                            metadata['__{key}__'.format(key=data['key'])] = data['value']
-                            metadata[data['key']] = data['value']
-                    if all(field in metadata for field in required_fields):
-                        metadata = {k: v for k, v in metadata.items() if not k.startswith('__')}
-                        break
-                    else:
-                        missing = []
-                        for field in required_fields:
-                            if field not in metadata:
-                                missing.append(field)
-                        metadata = {}
+            if filename != '__init__.py':
+                continue
+
+            filepath = os.path.join(root, filename)
+            with open(filepath, 'r') as fd:
+                for line in fd:
+                    for data in [m.groupdict() for m in engine.finditer(line)]:
+                        try:
+                            data['value'] = eval(data['value'], metadata, metadata)
+                        except Exception as e:
+                            print(e)
+                        metadata['__{key}__'.format(key=data['key'])] = data['value']
+                        metadata[data['key']] = data['value']
+                if all(field in metadata for field in required_fields):
+                    metadata = {k: v for k, v in metadata.items() if not k.startswith('__')}
+                    break
+                else:
+                    missing = []
+                    for field in required_fields:
+                        if field not in metadata:
+                            missing.append(field)
+                    import pdb; pdb.set_trace()
+                    metadata = {}
         if metadata != {}:
             break
     return metadata
@@ -140,18 +143,8 @@ def get_package_requirements(package_requires, required=None):
     requirements = {
         # Debug probably is only necessary for development environments
         'debug': [
-            'flask-debugtoolbar',
-            'ipdb',
             'ipython',
-            'jupyter',
-        ],
-
-        # Deploy identifies upgrades to local system prior to deployment
-        'deploy': [
-            'ansible >= 2',
-            'devpi-client',   # MIT - for pushing releases
-            'devpi-common',   # MIT - for pushing releases
-            'gitpython',
+            'pdbpp',
         ],
 
         # Docs should probably only be necessary in Continuous Integration
@@ -170,13 +163,6 @@ def get_package_requirements(package_requires, required=None):
             'numpy'
         ],
 
-        # Monitoring identifies upgrades to remote system mostly for nagios
-        'monitoring': [
-            'inotify',
-            'psutil',
-            'graphitesend',
-        ],
-
         # Requirements is the basic needs for this package
         'requirements': required,
 
@@ -184,15 +170,6 @@ def get_package_requirements(package_requires, required=None):
         'setup': [
             'pip',
             'pytest-runner',
-            'libsass >= 0.6.0',
-        ],
-
-        # Required for running scripts folder
-        'scripts': [
-            'GitPython',
-            'docker-py',
-            'python-magic',
-            'pyyaml',
         ],
 
         # Tests are needed in a local and CI environments for py.test and tox
@@ -263,7 +240,6 @@ def main():
     extras = {k: v for k, v in requirements.items() if k != 'requirements'}
     year = metadata.get('copyright_years') or datetime.datetime.now().year
     lic = metadata.get('license') or 'Copyright {year} - all rights reserved'.format(year=year)
-    # import pdb; pdb.set_trace()
 
     # Run setup
     setup(
