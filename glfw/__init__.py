@@ -51,14 +51,16 @@ if sys.version.startswith('2'):
 modname = os.path.basename(os.path.dirname(__file__))
 
 ###############################################################################
-__title__ = 'glfw-cffi'
-__version__ = '0.1.12-dev'
+
 __author__ = 'Brian Bruggeman'
+__copyright__ = 'Copyright 2016 Brian Bruggeman'
 __email__ = 'brian.m.bruggeman@gmail.com'
 __license__ = 'Apache 2.0'
-__copyright__ = 'Copyright 2016 Brian Bruggeman'
+__project__ = 'glfw-cffi'
+__shortdoc__ = 'Foreign Function Interface wrapper for GLFW v3.x'
 __url__ = 'https://github.com/brianbruggeman/glfw-cffi.git'
-__shortdesc__ = 'Foreign Function Interface wrapper for GLFW v3.x'
+__version_str__ = '0.2.0-dev'
+__version__ = tuple((int(v.split('-')[0]) for v in __version_str__.split('.')))
 
 
 ###############################################################################
@@ -273,7 +275,15 @@ def _camelToSnake(string):
 
 
 def _load_header(header_path, ffi):
-    '''Loads a header file'''
+    '''Loads a header file
+
+    Args:
+        header_path(str):  String to header file
+        ffi(cffi.FFI):  FFI instance
+
+    Returns:
+        str: compiled string source
+    '''
     source = ''
     with open(header_path, 'r') as fd:
         source = _fix_source(fd.read())
@@ -589,6 +599,8 @@ def set_error_callback(func):
     '''Wraps the error callback function for GLFW and sets the callback function
     for the entire program'''
 
+    # decorators is actually created in a hacky way (see: _initialize_module)
+    # This may flub any static checking, but it still runs
     @decorators.error_callback
     def wrapper(error, description):
         return func(error, _ffi.string(description))
