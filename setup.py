@@ -76,8 +76,6 @@ def setup_project():
         'Topic :: Multimedia :: Graphics :: Viewers',
         'Topic :: Multimedia :: Graphics',
         'Topic :: Software Development :: User Interfaces',
-
-        'Private :: Do Not Upload',  # This prevents accidental uploads to pypi
     ]
 
     return package_requires, links, classifiers
@@ -150,6 +148,7 @@ def get_package_requirements(package_requires, required=None):
         # Docs should probably only be necessary in Continuous Integration
         'docs': [
             'coverage',
+            'pandoc',
             'sphinx',
             'sphinx_rtd_theme',
             'sphinxcontrib-napoleon',
@@ -159,8 +158,8 @@ def get_package_requirements(package_requires, required=None):
         'examples': [
             'docopt',
             'freetype-py',
+            'numpy',
             'pyyaml',
-            'numpy'
         ],
 
         # Requirements is the basic needs for this package
@@ -172,11 +171,18 @@ def get_package_requirements(package_requires, required=None):
             'pytest-runner',
         ],
 
+        # Required for running scripts
+        'scripts': [
+            'GitPython',
+            'docopt',
+        ],
+
         # Tests are needed in a local and CI environments for py.test and tox
         # Note:  To run the tox environment for docs, docs must also be installed
         'tests': [
             'detox',
             'flask-debugtoolbar',
+            'numpy',
             'pdbpp',
             'pytest',
             'pytest-cov',
@@ -234,6 +240,14 @@ def get_console_scripts(metadata):
 def main():
     '''Sets up the package'''
     metadata = get_package_metadata()
+    if 'doc' not in metadata:
+        if os.path.exists('README.md'):
+            try:
+                import pypandoc
+                metadata['doc'] = pypandoc.convert('README.md', 'rst')
+            except ImportError:
+                with open('README.md', 'r') as fd:
+                    metadata['doc'] = fd.read()
     package_requires, links, classifiers = setup_project()
     requirements = get_package_requirements(package_requires=package_requires)
     project_name = metadata['project']

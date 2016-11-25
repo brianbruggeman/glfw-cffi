@@ -46,7 +46,7 @@ import OpenGL.GL as _gl
 
 
 if sys.version.startswith('2'):
-    range = xrange
+    range = xrange  # noqa
 
 modname = os.path.basename(os.path.dirname(__file__))
 
@@ -350,7 +350,8 @@ def _find_library(library_name, ffi, path=None):
 
 def _find_library_header(library_name, library_path, ffi):
     '''Attempts to find and load a header file relative to the library path'''
-    split_drive = lambda path: os.path.splitdrive(path)[-1]  # for windows
+    # Specialty code for windows.  Most elegant to implement with a lambda
+    split_drive = lambda path: os.path.splitdrive(path)[-1]  # noqa
     empty_paths = [os.path.sep, '', None]
     include_path = library_path
     include_path_found = False
@@ -549,6 +550,7 @@ def _initialize_module(ffi):
     globals()['decorators'] = decorators
     return ffi, _glfw
 
+
 # Cleanup namespace
 _ffi, _glfw = _initialize_module(FFI())
 globs = {k: v for k, v in globals().items()}
@@ -596,6 +598,7 @@ def create_window(width=640, height=480, title="Untitled", monitor=None, share=N
         win = None
     return win
 
+
 ###############################################################################
 # Special error handler callback
 ###############################################################################
@@ -608,7 +611,7 @@ def set_error_callback(func):
 
     # decorators is actually created in a hacky way (see: _initialize_module)
     # This may flub any static checking, but it still runs
-    @decorators.error_callback
+    @decorators.error_callback  # noqa
     def wrapper(error, description):
         return func(error, _ffi.string(description))
     global _error_callback_wrapper
