@@ -1,6 +1,7 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+*$py.class
 
 # C extensions
 *.so
@@ -42,6 +43,7 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *,cover
+.hypothesis/
 
 # Translations
 *.mo
@@ -50,12 +52,19 @@ coverage.xml
 # Django stuff:
 *.log
 
-# Sphinx documentation
-docs/_build/
+# JetBrains
+.idea/
 
 # PyBuilder
 target/
 
-# Virtual Environments
-venv*/
+# Mac OS X
 .DS_Store
+
+# pip
+src/
+
+# Sphinx
+docs/_build
+docs/coverage
+docs/reports

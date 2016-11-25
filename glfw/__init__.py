@@ -52,15 +52,16 @@ modname = os.path.basename(os.path.dirname(__file__))
 
 ###############################################################################
 
+__project__ = 'glfw-cffi'
+__shortdoc__ = 'Foreign Function Interface wrapper for GLFW v3.x'
+__license__ = 'Apache 2.0'
+__version_str__ = '0.2.0'
+__version__ = tuple((int(v.split('-')[0]) for v in __version_str__.split('.')))
+
 __author__ = 'Brian Bruggeman'
 __copyright__ = 'Copyright 2016 Brian Bruggeman'
 __email__ = 'brian.m.bruggeman@gmail.com'
-__license__ = 'Apache 2.0'
-__project__ = 'glfw-cffi'
-__shortdoc__ = 'Foreign Function Interface wrapper for GLFW v3.x'
 __url__ = 'https://github.com/brianbruggeman/glfw-cffi.git'
-__version_str__ = '0.2.0-dev'
-__version__ = tuple((int(v.split('-')[0]) for v in __version_str__.split('.')))
 
 
 ###############################################################################
