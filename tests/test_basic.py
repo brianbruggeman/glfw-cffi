@@ -1,18 +1,20 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import print_function, division
+
 from pprint import pprint as pp
-import sys
 
 import pytest
 
 
+@pytest.mark.unit
 def test_import():
     '''Basic test to determine if glfw can be imported successfully'''
     import glfw
     assert locals()['glfw'] == glfw
 
 
+@pytest.mark.unit
 def test_pre_init():
     '''Tests functions from glfw core that can be run prior to running
     init (also including init)'''
@@ -32,6 +34,7 @@ def test_pre_init():
     assert glfw.terminate() is None
 
 
+@pytest.mark.unit
 def test_basic_package_functions():
     '''Runs tests on basic package information that is available to the
     end user
@@ -44,91 +47,46 @@ def test_basic_package_functions():
     assert glfw.get_action_string(glfw.RELEASE) == 'release'
 
 
-def test_basic_window():
+@pytest.mark.unit
+def test_basic_window(window):
     '''Runs a simple window example'''
     import glfw
-    assert glfw.init() == glfw.gl.TRUE
-    width, height = (1, 1)
-    glfw.window_hint(glfw.FOCUSED, False)
-    win = glfw.create_window(title='Simple window', width=width, height=height)
-    assert win != glfw._ffi.NULL
+    assert window != glfw.ffi.NULL
     for x in range(2):
-        assert glfw.swap_buffers(win) is None
+        assert glfw.swap_buffers(window) is None
         assert glfw.poll_events() is None
-    assert win is not None
+    assert window is not None
     assert glfw.terminate() is None
 
 
-def test_opengl_compatibility():
+@pytest.mark.unit
+def test_basic_fullscreen(fullscreen):
+    '''Runs a simple window example'''
     import glfw
-    from glfw import gl
-    ffi = glfw._ffi
-    assert glfw.init() == glfw.gl.TRUE
-    opengl_version = None
-    opengl_info = {}
-    versions = [
-        (4, 5), (4, 4), (4, 3), (4, 2), (4, 1), (4, 0),
-        (3, 3), (3, 2), (3, 1), (3, 0),
-        (2, 1), (2, 0),
-        (1, 5), (1, 4), (1, 3), (1, 2), (1, 1), (1, 0),
-    ]
-    farg = ffi.new('char []', bytes('OpenGL Compatibility'.encode('utf-8')))
-    title = farg
-    for major, minor in versions:
-        version = major, minor
-        try:
-            # Request a specific version of opengl
-            glfw.window_hint(glfw.FOCUSED, gl.GL_FALSE)
-            glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, major)
-            glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, minor)
-            # Request a profile based on the version of opengl
-            profile = glfw.OPENGL_ANY_PROFILE if version < (3, 2) else glfw.OPENGL_CORE_PROFILE
-            glfw.window_hint(glfw.OPENGL_PROFILE, profile)
-            # Setup forward compatibility if able
-            forward_compat = gl.GL_FALSE if version < (3, 0) else gl.GL_TRUE
-            glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, forward_compat)
-            #  Keep the window invisible
-            glfw.window_hint(glfw.VISIBLE, gl.GL_FALSE)
-            # Generate a window anywhere on any monitor that's as small as possible
-            window = glfw.core.create_window(1, 1, title, ffi.NULL, ffi.NULL)
-            if window != ffi.NULL:
-                glfw.make_context_current(window)
-                # Save the highest version possible
-                if opengl_version is None:
-                    opengl_version = (major, minor)
-                    opengl_info['version'] = gl.get_string(gl.VERSION)
-                    opengl_info['vendor'] = gl.get_string(gl.VENDOR)
-                    opengl_info['renderer'] = gl.get_string(gl.RENDERER)
-                    opengl_info['GLSL'] = gl.get_string(gl.SHADING_LANGUAGE_VERSION)
+    assert fullscreen != glfw.ffi.NULL
+    for x in range(2):
+        assert glfw.swap_buffers(fullscreen) is None
+        assert glfw.poll_events() is None
+    assert fullscreen is not None
+    assert glfw.terminate() is None
 
-                    # Display Extension information
-                    if version < (3, 1):
-                        extension_count = gl.glGetIntegerv(gl.EXTENSIONS)
-                        for index in range(extension_count):
-                            extension_string = gl.get_string(gl.EXTENSIONS, index)
-                            opengl_info.setdefault('extensions', []).append(extension_string)
 
-                    # Display GLSL Versions
-                    if version >= (4, 3):
-                        glsl_version_count = gl.glGetIntegerv(gl.NUM_SHADING_LANGUAGE_VERSIONS)
-                        for index in range(glsl_version_count):
-                            glsl_version = gl.get_string(gl.SHADING_LANGUAGE_VERSION, index)
-                            opengl_info.setdefault('glsl_supported', []).append(glsl_version)
-                # Destroy every created window
-                glfw.destroy_window(window)
+@pytest.mark.unit
+def test_basic_windowed_fullscreen(windowed_fullscreen):
+    '''Runs a simple window example'''
+    import glfw
+    assert windowed_fullscreen != glfw.ffi.NULL
+    for x in range(2):
+        assert glfw.swap_buffers(windowed_fullscreen) is None
+        assert glfw.poll_events() is None
+    assert windowed_fullscreen is not None
+    assert glfw.terminate() is None
 
-        except Exception as e:
-            for line in e.args:
-                line = '{}'.format(line)
-                print('ERROR: ' + line, file=sys.stderr)
 
-    glfw_version_string = glfw.get_version_string()
-    pp('')
-    pp("GLFW Version String: {}".format(glfw_version_string))
-    pp('OpenGL Version: {}'.format(opengl_info['version']))
-    pp('OpenGL Vendor: {}'.format(opengl_info['vendor']))
-    pp('OpenGL Renderer: {}'.format(opengl_info['renderer']))
-    pp('OpenGL GLSL Supported: {}'.format(opengl_info['GLSL']))
+@pytest.mark.unit
+def test_opengl_compatibility(opengl_version, opengl_info):
+    import glfw
+
     if 'extensions' in opengl_info:
         for extension in opengl_info.get('extensions'):
             pp('OpenGL Extension: {}'.format(extension))
@@ -137,7 +95,30 @@ def test_opengl_compatibility():
             if glsl != opengl_info['GLSL']:
                 pp('OpenGL GLSL Supported: {}'.format(glsl))
     assert glfw.terminate() is None
-    assert opengl_version in versions
+    version_string = '.'.join(map(str, opengl_version))
+    assert version_string in opengl_info['version']
+
+
+@pytest.mark.unit
+def test_basic_monitor(primary_monitor):
+    import glfw
+    glfw.init()
+
+    mon = glfw.get_primary_monitor()
+    assert mon == primary_monitor.handle
+
+    modes = glfw.get_video_mode(mon)
+    size = glfw.get_monitor_physical_size(mon)
+    res = modes.width, modes.height
+    name = glfw.get_monitor_name(mon)
+    assert primary_monitor.position == (0, 0)
+    assert primary_monitor.connected is True
+    assert tuple(primary_monitor.size) == tuple(size)
+    assert primary_monitor.height, primary_monitor.width == res
+    assert primary_monitor.resolution == res
+    assert primary_monitor.rotated is False
+    assert primary_monitor.name == name
+    assert primary_monitor.primary is True
 
 
 if __name__ == '__main__':

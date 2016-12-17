@@ -15,20 +15,20 @@ def random_colors(count=1):
     return colors
 
 
-def test_basic_gl_snake_case_2d_triangle():
+@pytest.mark.unit
+def test_basic_gl_snake_case_2d_triangle(windowed_fullscreen):
     import glfw
+    from glfw import gl
     assert glfw.init() == glfw.gl.TRUE
-    gl = glfw.gl
-    width, height = (1, 1)
-    glfw.window_hint(glfw.FOCUSED, False)
-    win = glfw.create_window(title='Snake case test', width=width, height=height)
-    assert win != glfw._ffi.NULL
-    glfw.make_context_current(win)
+
+    win = windowed_fullscreen
+    width, height = glfw.get_window_size(win)
+    assert win != glfw.ffi.NULL
     gl.enable(gl.DEPTH_TEST)
     gl.depth_func(gl.LESS)
     gl.clear_color(0, 0, 0, 0)
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-    for x in range(2):
+    for x in range(10):
         gl.begin(gl.TRIANGLES)
         colors = random_colors(3)
         gl.color_3f(*colors[0])
@@ -37,22 +37,22 @@ def test_basic_gl_snake_case_2d_triangle():
         gl.vertex_3f(width, 0, 0)
         gl.color_3f(*colors[2])
         gl.vertex_3f(0, height, 0)
-        gl.end()
+        # gl.end()
         assert glfw.swap_buffers(win) is None
         assert glfw.poll_events() is None
     assert win is not None
     assert glfw.terminate() is None
 
 
-def test_basic_gl_camelCase_2d_triangle():
+@pytest.mark.unit
+def test_basic_gl_camelCase_2d_triangle(windowed_fullscreen):
     import glfw
+    from glfw import gl
     assert glfw.init() == glfw.gl.TRUE
-    gl = glfw.gl
-    width, height = (1, 1)
-    glfw.window_hint(glfw.FOCUSED, False)
-    win = glfw.create_window(title='CamelCase test', width=width, height=height)
-    assert win != glfw._ffi.NULL
-    glfw.make_context_current(win)
+
+    win = windowed_fullscreen
+    width, height = glfw.get_window_size(win)
+    assert win != glfw.ffi.NULL
     gl.glEnable(gl.GL_DEPTH_TEST)
     gl.glDepthFunc(gl.GL_LESS)
     gl.glClearColor(0, 0, 0, 0)
@@ -66,14 +66,15 @@ def test_basic_gl_camelCase_2d_triangle():
         gl.glVertex3f(width, 0, 0)
         gl.glColor3f(*colors[2])
         gl.glVertex3f(0, height, 0)
-        gl.glEnd()
+        # gl.glEnd()
         assert glfw.swap_buffers(win) is None
         assert glfw.poll_events() is None
     assert win is not None
     assert glfw.terminate() is None
 
 
-def test_shaders_2d_triangle():
+@pytest.mark.unit
+def test_shaders_2d_triangle(window):
     from textwrap import dedent as dd
     import ctypes
     from random import random as rand
@@ -82,8 +83,6 @@ def test_shaders_2d_triangle():
     import glfw
     from glfw import gl
 
-    width, height = (1, 1)
-    title = 'Shader test'
     vshader = '''
     #version 410
 
@@ -136,43 +135,6 @@ def test_shaders_2d_triangle():
     # Interleave vertex data for position and color
     data['position'] = vertices
     data['color'] = colors
-
-    assert glfw.init() == glfw.gl.TRUE
-    version = major, minor = (4, 1)
-    glfw.window_hint(glfw.FOCUSED, False)
-    glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, major)
-    glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, minor)
-    # Request a profile based on the version of opengl
-    profile = glfw.OPENGL_ANY_PROFILE
-    glfw.window_hint(glfw.OPENGL_PROFILE, profile)
-    forward_compat = False if version < (3, 0) else True
-    profile = glfw.OPENGL_ANY_PROFILE if version < (3, 2) else glfw.OPENGL_CORE_PROFILE
-    glfw.window_hint(glfw.OPENGL_PROFILE, profile)
-    # Setup forward compatibility if able
-    forward_compat = False if version < (3, 0) else True
-    glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, forward_compat)
-    #  Keep the window invisible
-    glfw.window_hint(glfw.VISIBLE, gl.GL_FALSE)
-    # Generate a window anywhere on any monitor that's as small as possible
-    window = glfw.create_window(1, 1, 'Compatibility')
-    if window is None:
-        pytest.skip("OpenGL 4.1 is not supported.")
-    glfw.terminate()
-    assert glfw.init() == glfw.gl.TRUE
-    glfw.window_hint(glfw.FOCUSED, False)
-    glfw.window_hint(glfw.SAMPLES, 4)
-    glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, major)
-    glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, minor)
-    glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
-    glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, True)
-    glfw.window_hint(glfw.RED_BITS, 24)
-    glfw.window_hint(glfw.GREEN_BITS, 24)
-    glfw.window_hint(glfw.BLUE_BITS, 24)
-    glfw.window_hint(glfw.ALPHA_BITS, 24)
-    glfw.window_hint(glfw.DEPTH_BITS, 24)
-
-    win = glfw.create_window(title=title, width=width, height=height)
-    glfw.core.make_context_current(win)
 
     gl.glEnable(gl.GL_DEPTH_TEST)
     gl.glDepthFunc(gl.GL_LESS)
@@ -263,8 +225,9 @@ def test_shaders_2d_triangle():
         # Cleanup
         gl.glDisableVertexAttribArray(vao)
         # Standard Loop Event handling
-        glfw.core.swap_buffers(win)
+        glfw.core.swap_buffers(window)
         glfw.core.poll_events()
+    glfw.terminate()
 
 
 if __name__ == '__main__':

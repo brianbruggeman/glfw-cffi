@@ -53,9 +53,7 @@ def setup_project():
     package_requires += private_packages
 
     # Links if needed for private repos
-    links = [
-        # 'git+https://git@github.com/intertwine/urlnorm.git',
-    ]
+    links = []
 
     # Project classifiers
     classifiers = [
@@ -96,36 +94,48 @@ def get_package_metadata(project_name=None):
         dict: package metdata
     '''
     top_folder = os.path.abspath(os.path.dirname(__file__))
-    required_fields = ['version', 'license', 'url', 'shortdoc', 'project']
-    engine = re.compile(r"^__(?P<key>(.*?))__ = (?P<value>(.*))")
+    required_fields = ['version', 'license', 'url', 'description', 'project']
     metadata = {}
+    missing_message = []
+    package_names = [p for p in find_packages() if '.' not in p]
     for root, folder, files in os.walk(top_folder):
+        if not any(root.endswith(p) for p in package_names):
+            continue
         for filename in files:
-            if filename != '__init__.py':
-                continue
-
-            filepath = os.path.join(root, filename)
-            with open(filepath, 'r') as fd:
-                for line in fd:
-                    for data in [m.groupdict() for m in engine.finditer(line)]:
-                        try:
-                            data['value'] = eval(data['value'], metadata, metadata)
-                        except Exception as e:
-                            print(e)
-                        metadata['__{key}__'.format(key=data['key'])] = data['value']
-                        metadata[data['key']] = data['value']
-                if all(field in metadata for field in required_fields):
-                    metadata = {k: v for k, v in metadata.items() if not k.startswith('__')}
-                    break
-                else:
-                    missing = []
-                    for field in required_fields:
-                        if field not in metadata:
-                            missing.append(field)
-                    import pdb; pdb.set_trace()
+            if filename == '__metadata__.py':
+                filepath = os.path.join(root, filename)
+                relpath = filepath.replace(top_folder, '').lstrip('/')
+                with open(os.path.join(filepath)) as fd:
+                    exec(fd.read(), metadata)
+                if 'package_metadata' in metadata:
+                    metadata = metadata.get('package_metadata', {})
+                if not all(field in metadata for field in required_fields):
+                    missing = ', '.join(
+                        field
+                        for field in sorted(required_fields)
+                        if field not in metadata
+                    )
+                    missing_message.append('{} is missing: {}'.format(relpath, missing))
                     metadata = {}
-        if metadata != {}:
+            if metadata:
+                break
+        if metadata:
             break
+    if not metadata:
+        print('Required package fields: {}'.format(', '.join(sorted(required_fields))))
+        print('\n'.join(missing_message))
+        raise Exception('Could not find package')
+    if 'doc' not in metadata:
+        if os.path.exists('README.md'):
+            try:
+                import pypandoc
+                metadata['doc'] = pypandoc.convert('README.md', 'rst')
+            except ImportError:
+                with open('README.md', 'r') as fd:
+                    metadata['doc'] = fd.read()
+        elif os.path.exists('README.rst'):
+            with open('README.rst', 'r') as fd:
+                metadata['doc'] = fd.read()
     return metadata
 
 
@@ -240,14 +250,6 @@ def get_console_scripts(metadata):
 def main():
     '''Sets up the package'''
     metadata = get_package_metadata()
-    if 'doc' not in metadata:
-        if os.path.exists('README.md'):
-            try:
-                import pypandoc
-                metadata['doc'] = pypandoc.convert('README.md', 'rst')
-            except ImportError:
-                with open('README.md', 'r') as fd:
-                    metadata['doc'] = fd.read()
     package_requires, links, classifiers = setup_project()
     requirements = get_package_requirements(package_requires=package_requires)
     project_name = metadata['project']
