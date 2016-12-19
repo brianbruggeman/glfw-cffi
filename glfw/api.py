@@ -114,6 +114,7 @@ class Monitor(object):
     '''
 
     def __init__(self, handle=None):
+        core.init()
         if handle is None:
             handle = snake.get_primary_monitor()
         self.handle = handle
