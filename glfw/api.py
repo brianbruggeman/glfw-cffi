@@ -3,7 +3,6 @@ from __future__ import (absolute_import, division, print_function,  # noqa
                         unicode_literals)
 
 import os
-import sys
 from collections import namedtuple
 
 # Import core and then import core functionality so we can override
@@ -34,7 +33,7 @@ def get_include():
     return include_path
 
 
-def create_window(width=640, height=480, title="Untitled", monitor=None, share=None):
+def create_window(width=None, height=None, title=None, monitor=None, share=None, raise_exception=False):
     '''Creates a window
 
     If a monitor is specified, then by default the application will
@@ -46,7 +45,13 @@ def create_window(width=640, height=480, title="Untitled", monitor=None, share=N
     mode.  During this operation, the window must be destroyed and
     re-created.
     '''
+    primary_monitor = core.get_primary_monitor()
+    modes = core.get_video_mode(primary_monitor)[0]
+    width = modes.width if width is None else width
+    height = modes.height if height is None else height
+    title = "Untitled" if title is None else title
     monitors = get_monitors()
+
     if isinstance(monitor, Monitor):
         monitor = monitor.handle
     elif isinstance(monitor, int) and monitor < len(monitors):
@@ -55,7 +60,7 @@ def create_window(width=640, height=480, title="Untitled", monitor=None, share=N
     elif isinstance(monitor, str):
         # monitor is the name of a monitor
         if monitor.lower() == 'primary':
-            monitor = snake.get_primary_monitor()
+            monitor = primary_monitor
         else:
             monitor_matches = [m for m in monitors if m.name == monitor]
             # Pick the first one on multiple matches
@@ -65,21 +70,18 @@ def create_window(width=640, height=480, title="Untitled", monitor=None, share=N
             if not isinstance(monitor, raw._ffi.CData):
                 monitor = raw._ffi.NULL
     if monitor is None:
-        monitor = core.glfwGetPrimaryMonitor()
+        monitor = primary_monitor
     if share is None:
         share = raw._ffi.NULL
-    if sys.version.startswith('3'):
-        farg = raw._ffi.new('char []', bytes(title.encode('utf-8')))
-        title = farg
     args = (
         width,
         height,
-        title,
+        string_ffi(title),
         monitor or raw._ffi.NULL,
         share or raw._ffi.NULL
     )
-    win = core.glfwCreateWindow(*args)
-    if win == raw._ffi.NULL:
+    win = core.create_window(*args)
+    if win == raw._ffi.NULL and raise_exception:
         win = None
         args = {
             'width': width,
@@ -222,6 +224,13 @@ def ffi_string(cdata):
         if 'char' in ffi.typeof(cdata).cname:
             cdata = ffi.string(cdata)
     return cdata
+
+
+def string_ffi(string):
+    '''Converts a python string into char * cdata'''
+    if isinstance(string, str):
+        string = raw._ffi.new('char []', bytes(string, 'utf-8'))
+    return string
 
 
 def get_key_string(key):

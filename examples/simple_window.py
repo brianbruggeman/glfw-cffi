@@ -3,8 +3,8 @@
 '''
 Displays a simple window using glfw-cffi.
 '''
-from __future__ import print_function
-from __future__ import division
+from __future__ import (absolute_import, division, print_function,  # noqa
+                        unicode_literals)
 
 import glfw
 from OpenGL import GL as gl

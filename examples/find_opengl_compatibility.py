@@ -12,16 +12,14 @@ Options:
 '''
 import sys
 
+import glfw
 import OpenGL
 OpenGL.ERROR_CHECKING = True
+from glfw import ffi
 from OpenGL import GL as gl
-import glfw
-
-import sys
 
 
 def get_opengl_compatibility(logger=None):
-    ffi = glfw._ffi
     if logger is not None:
         logger.debug("Determining capabilities...")
     opengl_version = None
@@ -87,7 +85,6 @@ def get_opengl_compatibility(logger=None):
 if __name__ == '__main__':
     import logging
 
-    from cffi import FFI
     from docopt import docopt
 
     def fix(option):

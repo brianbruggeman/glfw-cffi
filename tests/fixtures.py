@@ -9,6 +9,7 @@ def setup_window(major, minor):
 
     version = (major, minor)
     glfw.window_hint(glfw.FOCUSED, False)
+    glfw.window_hint(glfw.VISIBLE, False)
     glfw.window_hint(glfw.SAMPLES, 4)
     glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, major)
     glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, minor)
@@ -27,26 +28,21 @@ def setup_window(major, minor):
     glfw.window_hint(glfw.DEPTH_BITS, 24)
 
 
-@pytest.fixture(scope="function")
-def setup_glfw():
-    import glfw
-    assert glfw.init()
-
-
 @pytest.fixture(scope='function')
 def primary_monitor():
     import glfw
     glfw.init()
+
     handle = glfw.core.glfwGetPrimaryMonitor()
     mon = glfw.Monitor(handle)
     return mon
 
 
-@pytest.mark.usefixtures("setup_glfw")
 @pytest.fixture(scope="function")
-def opengl_version():
+def opengl_version(primary_monitor):
     import glfw
-    from glfw import ffi, gl
+    from glfw import ffi
+    glfw.init()
 
     opengl_version = None
     versions = [
@@ -55,8 +51,8 @@ def opengl_version():
         (2, 1), (2, 0),
         (1, 5), (1, 4), (1, 3), (1, 2), (1, 1), (1, 0),
     ]
-    farg = ffi.new('char []', bytes(''.encode('utf-8')))
-    title = farg
+    title = 'opengl version finder'
+    width, height = primary_monitor.width, primary_monitor.height
 
     if not glfw.core.init():
         glfw.terminate()
@@ -64,18 +60,16 @@ def opengl_version():
 
     for major, minor in versions:
         try:
-            glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, major)
-            glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, minor)
-            glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
-            glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, gl.GL_TRUE)
-            glfw.window_hint(glfw.VISIBLE, gl.GL_FALSE)
-            glfw.window_hint(glfw.FOCUSED, gl.GL_FALSE)
-            window = glfw.core.create_window(1, 1, title, ffi.NULL, ffi.NULL)
+            setup_window(major, minor)
+            window = glfw.create_window(width=width, height=height, title=title, monitor=primary_monitor)
             if window != ffi.NULL:
                 glfw.destroy_window(window)
                 if opengl_version is None:
                     opengl_version = (major, minor)
-        except Exception:
+                    break
+        except Exception as e:
+            import traceback
+            print(traceback.format_exc(e))
             opengl_version = None
     if opengl_version is None:
         raise RuntimeError('OpenGL context could not be generated.')
@@ -83,25 +77,25 @@ def opengl_version():
 
 
 @pytest.fixture(scope="function")
-def window(opengl_version):
+def window(primary_monitor, opengl_version):
     import glfw
 
     major, minor = opengl_version
     setup_window(major, minor)
 
     title = 'Test Fixture Window'
-    width = 1
-    height = 1
+    width = primary_monitor.width
+    height = primary_monitor.height
     win = glfw.create_window(title=title, width=width, height=height)
     glfw.core.make_context_current(win)
     return win
 
 
-@pytest.mark.usefixtures("setup_glfw")
 @pytest.fixture(scope='function')
 def opengl_info(opengl_version, window):
     import glfw
     from glfw import gl
+    glfw.init()
 
     glfw.make_context_current(window)
     opengl_info = {
@@ -117,36 +111,32 @@ def opengl_info(opengl_version, window):
 
 
 @pytest.fixture(scope="function")
-def fullscreen(opengl_version):
+def fullscreen(primary_monitor, opengl_version):
     import glfw
 
     major, minor = opengl_version
     setup_window(major, minor)
 
     title = 'Test Fixture Fullscreen'
-    handle = glfw.get_primary_monitor()
-    monitor = glfw.Monitor(handle)
     # Use the monitor's window so that it doesn't reset all other monitors
     # This actually reduces test time.
-    width, height = monitor.width, monitor.height
+    width, height = primary_monitor.width, primary_monitor.height
     win = glfw.create_window(title=title, width=width, height=height, monitor='primary')
     glfw.core.make_context_current(win)
     return win
 
 
 @pytest.fixture(scope="function")
-def windowed_fullscreen(opengl_version):
+def windowed_fullscreen(primary_monitor, opengl_version):
     import glfw
 
     major, minor = opengl_version
     setup_window(major, minor)
 
     title = 'Test Fixture Windowed Fullscreen'
-    monitor = glfw.get_primary_monitor()
-    mode = glfw.get_video_mode(monitor)
     # Use the monitor's window so that it doesn't reset all other monitors
     # This actually reduces test time.
-    width, height = mode.width, mode.height
+    width, height = primary_monitor.width, primary_monitor.height
     win = glfw.create_window(title=title, width=width, height=height, monitor=0)
     glfw.core.make_context_current(win)
     return win

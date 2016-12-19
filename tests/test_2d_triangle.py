@@ -16,12 +16,12 @@ def random_colors(count=1):
 
 
 @pytest.mark.unit
-def test_basic_gl_snake_case_2d_triangle(windowed_fullscreen):
+def test_gl_snake_case_2d_triangle(window):
     import glfw
     from glfw import gl
     assert glfw.init() == glfw.gl.TRUE
 
-    win = windowed_fullscreen
+    win = window
     width, height = glfw.get_window_size(win)
     assert win != glfw.ffi.NULL
     gl.enable(gl.DEPTH_TEST)
@@ -45,7 +45,7 @@ def test_basic_gl_snake_case_2d_triangle(windowed_fullscreen):
 
 
 @pytest.mark.unit
-def test_basic_gl_camelCase_2d_triangle(windowed_fullscreen):
+def test_gl_camelCase_2d_triangle(windowed_fullscreen):
     import glfw
     from glfw import gl
     assert glfw.init() == glfw.gl.TRUE

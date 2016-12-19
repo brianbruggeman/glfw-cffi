@@ -11,9 +11,9 @@ def test_decorators():
     from glfw import gl
     assert glfw.init() == gl.TRUE
 
-    width, height = (1, 1)
     glfw.window_hint(glfw.FOCUSED, False)
-    win = glfw.create_window(title='Decorator test', width=width, height=height)
+    glfw.window_hint(glfw.VISIBLE, False)
+    win = glfw.create_window(title='Decorator test')
     glfw.make_context_current(win)
 
     @glfw.decorators.char_callback

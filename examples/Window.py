@@ -23,11 +23,12 @@ import OpenGL
 # Turn off ERROR_CHECKING to improve OpenGL performance
 #  This must be run before glfw is imported
 OpenGL.ERROR_CHECKING = True
+
 import glfw
 # GLFW comes with a replacement for OpenGL which uses OpenGL but renames
 #  the functions so they are snake_case and drops the GL_ prefix
 #  from enumerations
-import glfw.gl as gl
+from glfw import gl
 
 
 log = logging.getLogger('Window')
@@ -35,6 +36,11 @@ log = logging.getLogger('Window')
 
 class Window(object):
     '''Wraps GLFW functions into a convenient package
+
+    Args:
+        title(str): Name of the window
+        height(int): height of the window
+        width(int): width of the window
 
     >>> win = Window(title='Example', width=1080, height=720)
     >>> win.loop()
@@ -65,7 +71,7 @@ class Window(object):
         fb_width, fb_height = glfw.get_framebuffer_size(self.win)
         return fb_height
 
-    def __init__(self, title='GLFW Example', height=480, width=640):
+    def __init__(self, title='GLFW Example', height=None, width=None, monitor=None):
         # Determine available major/minor compatibility
         #  This contains init and terminate logic for glfw, so it must be run first
         major, minor = self.get_opengl_version()
@@ -75,9 +81,6 @@ class Window(object):
         #  collection
         self.lock = threading.Lock()
 
-        if not glfw.core.init():
-            raise RuntimeError('Could not initialize glfw')
-
         # Hinting must be run before window creation
         glfw.core.window_hint(glfw.CONTEXT_VERSION_MAJOR, major)
         glfw.core.window_hint(glfw.CONTEXT_VERSION_MINOR, minor)
@@ -85,7 +88,18 @@ class Window(object):
         glfw.core.window_hint(glfw.OPENGL_FORWARD_COMPAT, gl.TRUE)
 
         # Generate window
-        self.win = glfw.create_window(height=height, width=width, title=title)
+        if monitor is None:
+            count = glfw.ffi.new('int *')
+            monitor_list = glfw.core.get_monitors(count)
+            monitor_list = [monitor_list[index] for index in range(count[0])]
+
+            # handle = glfw.get_primary_monitor()
+            # monitor = handle
+        if height is None and width is None:
+            if not isinstance(monitor, glfw.Monitor):
+                monitor = glfw.Monitor(monitor)
+            width, height = monitor.resolution
+        self.win = glfw.create_window(height=height, width=width, title=title)  # , monitor=monitor)
         Window.registry[self.win] = self
 
         # Setup window callbacks: Must be run after creating an OpenGL window
@@ -97,11 +111,12 @@ class Window(object):
 
     def __del__(self):
         '''Removes the glfw window'''
-        glfw.core.set_window_should_close(self.win, gl.TRUE)
-        # Wait for loop to end
-        self.lock.acquire()
-        glfw.destroy_window(self.win)
-        self.lock.release()
+        if hasattr(self, 'win'):
+            glfw.core.set_window_should_close(self.win, gl.TRUE)
+            # Wait for loop to end
+            self.lock.acquire()
+            glfw.destroy_window(self.win)
+            self.lock.release()
 
     def get_opengl_version(self):
         '''Contains logic to determine opengl version.
@@ -110,7 +125,7 @@ class Window(object):
         '''
         # Determine available major/minor compatibility
         #  This contains init and terminate logic for glfw, so it must be run first
-        ffi = glfw._ffi
+        ffi = glfw.ffi
         opengl_version = None
         versions = [
             (4, 5), (4, 4), (4, 3), (4, 2), (4, 1), (4, 0),
@@ -188,7 +203,7 @@ class Window(object):
     @staticmethod
     def cdata_to_pystring(cdata):
         '''Converts char * cdata into a python string'''
-        return glfw.cdata_to_pystring(cdata)
+        return glfw.ffi_string(cdata)
 
     @staticmethod
     @glfw.decorators.char_callback
@@ -341,7 +356,6 @@ def main(**options):
     title = options.get('title')
     window = Window(title=title, height=height, width=width)
     window.loop()
-    glfw.terminate()
 
 
 if __name__ == '__main__':
