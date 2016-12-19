@@ -3,6 +3,7 @@ from __future__ import (absolute_import, division, print_function,  # noqa
                         unicode_literals)
 
 import os
+import sys
 from collections import namedtuple
 
 # Import core and then import core functionality so we can override
@@ -229,7 +230,8 @@ def ffi_string(cdata):
 def string_ffi(string):
     '''Converts a python string into char * cdata'''
     if isinstance(string, str):
-        string = raw._ffi.new('char []', bytes(string, 'utf-8'))
+        string = bytes(string, 'utf-8') if sys.version.startswith('3') else bytes(string.encode('utf-8'))
+        string = raw._ffi.new('char []', string)
     return string
 
 
