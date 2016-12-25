@@ -19,30 +19,76 @@ env:
   global:
     - WORKON_HOME=$HOME/.local/envs
     - GLFW_VERSION=3.2.1
+    - DISPLAY=:99.0
 
 matrix:
   fast_finish: true
   allow_failures:
       - python: "nightly"
 
+addons:
+  apt:
+    packages:
+      - [libegl1-mesa, cmake, xorg-dev, libglu1-mesa-dev, mercurial,
+         libdbus-1-dev, libgl1-mesa-dev, libglu1-mesa-dev, libpulse-dev,
+         libx11-dev, libxcursor-dev, libxext-dev, libxi-dev, libxinerama-dev,
+         libxrandr-dev, libxss-dev, libxt-dev, libxv-dev, libxxf86vm-dev,
+         libasound2-dev, libts-dev, libudev-dev]
+
+
 # Install system dependencies
 before_install:
   # Update System
   - mkdir -p $HOME/.local/envs
-  - sudo add-apt-repository 'deb http://us.archive.ubuntu.com/ubuntu/ wily main restricted universe multiverse'
-  - sudo add-apt-repository 'deb http://us.archive.ubuntu.com/ubuntu/ wily-updates main restricted universe multiverse'
+  - sudo apt-get update -qq
+  - sudo apt-get install -qq software-properties-common lsb-release wget unzip
+  - sudo add-apt-repository 'deb http://us.archive.ubuntu.com/ubuntu/ $(lsb_release -c | cut -f2) main restricted universe multiverse'
+  - sudo add-apt-repository 'deb http://us.archive.ubuntu.com/ubuntu/ $(lsb_release -c | cut -f2)-updates main restricted universe multiverse'
   - sudo apt-get update -qq
 
   # Install dependencies
-  - sudo apt-get install -qq cmake g++-4.8 gcc-4.8 libglew-dev libfreetype6-dev libxrandr-dev libxrandr-dev libxinerama-dev libxcursor-dev freeglut3-dev libxxf86vm-dev libglu1-mesa-dev
+  - sudo apt-get install -qq \
+      cmake \
+      g++ \
+      gcc \
+      xvfb \
+      libglew-dev \
+      libfreetype6-dev \
+      libxrandr-dev \
+      libxrandr-dev \
+      libxinerama-dev \
+      libxcursor-dev \
+      freeglut3-dev \
+      libxxf86vm-dev \
+      libglu1-mesa-dev \
+      libegl1-mesa \
+      xorg-dev \
+      libdbus-1-dev \
+      libgl1-mesa-dev \
+      libglu1-mesa-dev \
+      libpulse-dev \
+      libx11-dev \
+      libxcursor-dev \
+      libxext-dev \
+      libxi-dev \
+      libxinerama-dev \
+      libxrandr-dev \
+      libpulse-dev \
+      libxss-dev \
+      libxt-dev \
+      libxv-dev \
+      libxxf86vm-dev \
+      libasound2-dev \
+      libudev-dev
 
   # Install GLFW $GLFW_VERSION
   - wget -O glfw.zip https://github.com/glfw/glfw/releases/download/$GLFW_VERSION/glfw-$GLFW_VERSION.zip
   - unzip glfw.zip
   - cd glfw-$GLFW_VERSION
-  - cmake -DBUILD_SHARED_LIBS=ON -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF -DCMAKE_INSTALL_PREFIX=/usr -DLIB_SUFFIX=/x86_64-linux-gnu
+  - cmake -DBUILD_SHARED_LIBS=ON -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF -DCMAKE_INSTALL_PREFIX=$HOME
   - make
   - sudo make install
+  - "export GLFW_LIBRARY=${HOME}/lib/libglfw.so"
   - cd ..
 
   # Install special pypy numpy for pypy compatibility or grab standard
@@ -50,8 +96,8 @@ before_install:
   - pip install -r requirements.txt
 
   # glfw-cffi requires a working X11 display to run any tests
-  - "export DISPLAY=:99.0"
   - "sh -e /etc/init.d/xvfb start"
+  - "sh -e /usr/bin/Xvfb :99 -screen 0 1024x768x24 &>/dev/null &"
 
 install:
    - pip install tox-travis
