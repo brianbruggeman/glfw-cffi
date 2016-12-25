@@ -5,8 +5,8 @@ python:
     - "pypy"
     - "2.7"
     - "3.5"
-    - "3.5-dev" # 3.5 development branch
-    - "nightly" # currently points to 3.6-dev
+    - "3.6"
+    - "nightly" # currently points to 3.7-dev
 
 branches:
     only:
@@ -17,7 +17,7 @@ os:
 matrix:
   fast_finish: true
   allow_failures:
-      - python: "3.5-dev"
+      - python: "3.6"
       - python: "nightly"
 
 # Install system dependencies
@@ -48,7 +48,7 @@ before_install:
   - "sh -e /etc/init.d/xvfb start"
 
 install:
-   - pip install -e .
+   - pip install tox-travis
 
 before_script:
   # Required for running a test
@@ -61,7 +61,7 @@ before_script:
 # command to run tests
 script:
    # Run each separately so we have an idea of what's broken in travis
-   - py.test tests/
+   - tox
 
 after_success:
    - coveralls

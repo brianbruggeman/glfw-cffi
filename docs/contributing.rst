@@ -4,7 +4,7 @@ Contributing
 
 Installing
 ----------
-See: :doc:`Getting started <getting-started>`
+See: :doc:`Getting started <getting_started>`
 
 
 Testing

@@ -261,7 +261,7 @@ def main():
     setup(
         # Package metadata information
         name=project_name,
-        version=metadata.get('version_str') or 'unknown',
+        version=metadata.get('versionstr') or 'unknown',
         description=metadata.get('shortdoc') or project_name,
         long_description=metadata.get('doc') or metadata.get('shortdoc') or project_name,
         url=metadata.get('url') or '',

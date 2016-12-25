@@ -121,5 +121,49 @@ def test_basic_monitor(primary_monitor):
     assert primary_monitor.primary is True
 
 
+@pytest.mark.unit
+def test_multi_monitor_create_window():
+    import glfw
+    glfw.init()
+
+    monitors = glfw.get_monitors()
+    last_monitor = monitors[-1]
+
+    window = glfw.create_window(
+        width=last_monitor.width,
+        height=last_monitor.height,
+        title='Multi-monitor test',
+        monitor=last_monitor)
+
+
+@pytest.mark.unit
+def test_create_window_exception():
+    import glfw
+    glfw.init()
+
+    with pytest.raises(RuntimeError):
+        glfw.terminate()
+
+        window = glfw.create_window(title='Window Exception test')
+
+
+@pytest.mark.unit
+def test_api_monitor():
+    import glfw
+    glfw.init()
+
+    mon = glfw.Monitor()
+
+
+@pytest.mark.unit
+def test_ffi_string():
+    import glfw
+    glfw.init()
+
+    test_string = b'hello, world'
+    my_string = glfw.ffi.new('char[]', test_string)
+    assert glfw.ffi_string(my_string) == test_string
+
+
 if __name__ == '__main__':
     pytest.main()

@@ -34,9 +34,8 @@ Contents
    :caption: Reports
 
    Code Coverage <code_coverage>
-   Licenses Used <license_report>
    Python 2.7 <py27_report>
-   Python 3.5 <py35_report>
+   Python 3.6 <py36_report>
    Pypy 5.3 <pypy_report>
    Style <style_report>
 
