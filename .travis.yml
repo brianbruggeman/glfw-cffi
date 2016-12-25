@@ -16,12 +16,13 @@ os:
   - linux
 
 env:
-  - WORKON_HOME=$HOME/.local/envs
+  global:
+    - WORKON_HOME=$HOME/.local/envs
+    - GLFW_VERSION=3.2.1
 
 matrix:
   fast_finish: true
   allow_failures:
-      - python: "3.6"
       - python: "nightly"
 
 # Install system dependencies
@@ -35,10 +36,10 @@ before_install:
   # Install dependencies
   - sudo apt-get install -qq cmake g++-4.8 gcc-4.8 libglew-dev libfreetype6-dev libxrandr-dev libxrandr-dev libxinerama-dev libxcursor-dev freeglut3-dev libxxf86vm-dev libglu1-mesa-dev
 
-  # Install GLFW 3.1.2
-  - wget -O glfw.zip https://github.com/glfw/glfw/releases/download/3.2.1/glfw-3.2.1.zip
+  # Install GLFW $GLFW_VERSION
+  - wget -O glfw.zip https://github.com/glfw/glfw/releases/download/$GLFW_VERSION/glfw-$GLFW_VERSION.zip
   - unzip glfw.zip
-  - cd glfw-3.2.1
+  - cd glfw-$GLFW_VERSION
   - cmake -DBUILD_SHARED_LIBS=ON -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF -DCMAKE_INSTALL_PREFIX=/usr -DLIB_SUFFIX=/x86_64-linux-gnu
   - make
   - sudo make install
