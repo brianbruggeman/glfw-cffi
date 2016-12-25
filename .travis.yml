@@ -43,44 +43,13 @@ before_install:
   - sudo apt-get update -qq
   - sudo apt-get install -qq software-properties-common lsb-release wget unzip
   - "export RELEASE_NAME=$(lsb_release -cs)"
+  - echo $RELEASE_NAME
   - sudo add-apt-repository "deb http://us.archive.ubuntu.com/ubuntu/ $RELEASE_NAME main restricted universe multiverse"
   - sudo add-apt-repository "deb http://us.archive.ubuntu.com/ubuntu/ $RELEASE_NAME-updates main restricted universe multiverse"
   - sudo apt-get update -qq
 
   # Install dependencies
-  - sudo apt-get install -qq \
-      cmake \
-      g++ \
-      gcc \
-      xvfb \
-      libglew-dev \
-      libfreetype6-dev \
-      libxrandr-dev \
-      libxrandr-dev \
-      libxinerama-dev \
-      libxcursor-dev \
-      freeglut3-dev \
-      libxxf86vm-dev \
-      libglu1-mesa-dev \
-      libegl1-mesa \
-      xorg-dev \
-      libdbus-1-dev \
-      libgl1-mesa-dev \
-      libglu1-mesa-dev \
-      libpulse-dev \
-      libx11-dev \
-      libxcursor-dev \
-      libxext-dev \
-      libxi-dev \
-      libxinerama-dev \
-      libxrandr-dev \
-      libpulse-dev \
-      libxss-dev \
-      libxt-dev \
-      libxv-dev \
-      libxxf86vm-dev \
-      libasound2-dev \
-      libudev-dev
+  - sudo apt-get install -qq cmake g++ gcc xvfb libglew-dev libfreetype6-dev libxrandr-dev libxrandr-dev libxinerama-dev libxcursor-dev freeglut3-dev libxxf86vm-dev libglu1-mesa-dev libegl1-mesa xorg-dev libdbus-1-dev libgl1-mesa-dev libglu1-mesa-dev libpulse-dev libx11-dev libxcursor-dev libxext-dev libxi-dev libxinerama-dev libxrandr-dev libpulse-dev libxss-dev libxt-dev libxv-dev libxxf86vm-dev libasound2-dev libudev-dev
 
   # Install GLFW $GLFW_VERSION
   - wget -O glfw.zip https://github.com/glfw/glfw/releases/download/$GLFW_VERSION/glfw-$GLFW_VERSION.zip
