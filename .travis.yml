@@ -20,7 +20,7 @@ env:
     - WORKON_HOME=$HOME/.local/envs
     - GLFW_VERSION=3.2.1
     - DISPLAY=:99.0
-    - RELEASE_NAME=(lsb_release -cs)
+    - RELEASE_NAME=$(lsb_release -cs)
 
 matrix:
   fast_finish: true
