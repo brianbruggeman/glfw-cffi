@@ -85,6 +85,8 @@ script:
   # glfw-cffi requires a working X11 display to run any tests
   - circusd circus.ini --daemon
   - circusctl list
+  - circusctl status xvfb
+  - circusctl stats xvfb
   - tox
 
 after_success:
