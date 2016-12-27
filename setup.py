@@ -198,8 +198,10 @@ def get_package_requirements(package_requires, required=None):
             'pytest-cov',
             'pytest-flake8',
             'pytest-html',
+            'pytest-travis-fold',
             'pytest-xdist',
             'tox',
+            'tox-travis',
         ],
 
     }

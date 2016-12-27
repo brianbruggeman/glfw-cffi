@@ -71,14 +71,6 @@ before_install:
 install:
    - pip install tox-travis
 
-before_script:
-  # Required for running a test
-  - pip install pytest
-  - pip install pytest-flake8
-  - pip install pytest-cov
-  # Required for coveralls
-  - pip install python-coveralls
-
 # command to run tests
 script:
    # Run each separately so we have an idea of what's broken in travis
