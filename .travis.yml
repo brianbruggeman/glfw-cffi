@@ -17,7 +17,6 @@ os:
 
 env:
   global:
-    - HOME=/root
     - WORKON_HOME=$HOME/.local/envs
     - GLFW_VERSION=3.2.1
     - GLFW_LIBRARY=/opt/glfw
