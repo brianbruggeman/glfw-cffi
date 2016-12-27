@@ -80,7 +80,7 @@ script:
   - circusctl status xvfb
   - circusctl stats xvfb
   - python -c 'import glfw; print(glfw.init())'
-  - python -m pytest --cov-append --cov=glfw -vvv -s -r a
+  - python -m pytest --cov-append --cov=glfw -vv -s
 
 after_success:
    - coveralls
