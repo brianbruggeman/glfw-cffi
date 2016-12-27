@@ -65,11 +65,11 @@ before_install:
 
   # Install special pypy numpy for pypy compatibility or grab standard
   - if [[ $TRAVIS_PYTHON_VERSION == 'pypy' ]]; then travis_retry pip install git+https://bitbucket.org/pypy/numpy.git@pypy-4.0.1; fi
-  - pip install -e .[tests]
-  - pip install circus
 
 install:
-   - pip install tox-travis
+  - pip install -e .[tests]
+  - pip install circus
+  # - pip install tox-travis
 
 # command to run tests
 script:
@@ -79,7 +79,8 @@ script:
   - circusctl list
   - circusctl status xvfb
   - circusctl stats xvfb
-  - tox
+  - python -c 'import glfw; print(glfw.init())'
+  - python -m pytest --cov-append --cov=glfw -vvv -s -r a
 
 after_success:
    - coveralls

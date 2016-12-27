@@ -79,6 +79,7 @@ def opengl_version(primary_monitor):
 @pytest.fixture(scope="function")
 def window(primary_monitor, opengl_version):
     import glfw
+    glfw.init()
 
     major, minor = opengl_version
     setup_window(major, minor)
@@ -113,6 +114,7 @@ def opengl_info(opengl_version, window):
 @pytest.fixture(scope="function")
 def fullscreen(primary_monitor, opengl_version):
     import glfw
+    glfw.init()
 
     major, minor = opengl_version
     setup_window(major, minor)
@@ -129,6 +131,7 @@ def fullscreen(primary_monitor, opengl_version):
 @pytest.fixture(scope="function")
 def windowed_fullscreen(primary_monitor, opengl_version):
     import glfw
+    glfw.init()
 
     major, minor = opengl_version
     setup_window(major, minor)
