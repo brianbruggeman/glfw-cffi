@@ -40,6 +40,7 @@ def test_basic_package_functions():
     end user
     '''
     import glfw
+    glfw.init()
     assert glfw.get_include() is not None
     assert glfw.get_key_string(glfw.KEY_A) == 'a'
     assert glfw.get_mod_string(glfw.MOD_SHIFT) == 'shift'
@@ -51,6 +52,7 @@ def test_basic_package_functions():
 def test_basic_window(window):
     '''Runs a simple window example'''
     import glfw
+    glfw.init()
     assert window != glfw.ffi.NULL
     for x in range(2):
         assert glfw.swap_buffers(window) is None
@@ -63,6 +65,7 @@ def test_basic_window(window):
 def test_basic_fullscreen(fullscreen):
     '''Runs a simple window example'''
     import glfw
+    glfw.init()
     assert fullscreen != glfw.ffi.NULL
     for x in range(2):
         assert glfw.swap_buffers(fullscreen) is None
@@ -75,6 +78,7 @@ def test_basic_fullscreen(fullscreen):
 def test_basic_windowed_fullscreen(windowed_fullscreen):
     '''Runs a simple window example'''
     import glfw
+    glfw.init()
     assert windowed_fullscreen != glfw.ffi.NULL
     for x in range(2):
         assert glfw.swap_buffers(windowed_fullscreen) is None
@@ -86,6 +90,7 @@ def test_basic_windowed_fullscreen(windowed_fullscreen):
 @pytest.mark.unit
 def test_opengl_compatibility(opengl_version, opengl_info):
     import glfw
+    glfw.init()
 
     if 'extensions' in opengl_info:
         for extension in opengl_info.get('extensions'):
