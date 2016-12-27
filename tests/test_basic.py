@@ -30,7 +30,7 @@ def test_pre_init():
     glfw_version_string = glfw.get_version_string()
     assert glfw_version is not None
     assert glfw_version_string.startswith(bytes('.'.join('{}'.format(v) for v in glfw_version).encode('utf-8')))
-    assert glfw.init() != 0
+    assert glfw.init() == glfw.gl.TRUE
     assert glfw.terminate() is None
 
 
@@ -40,7 +40,8 @@ def test_basic_package_functions():
     end user
     '''
     import glfw
-    glfw.init()
+    assert glfw.init() == glfw.gl.TRUE
+
     assert glfw.get_include() is not None
     assert glfw.get_key_string(glfw.KEY_A) == 'a'
     assert glfw.get_mod_string(glfw.MOD_SHIFT) == 'shift'
@@ -52,7 +53,8 @@ def test_basic_package_functions():
 def test_basic_window(window):
     '''Runs a simple window example'''
     import glfw
-    glfw.init()
+    assert glfw.init() == glfw.gl.TRUE
+
     assert window != glfw.ffi.NULL
     for x in range(2):
         assert glfw.swap_buffers(window) is None
@@ -65,7 +67,8 @@ def test_basic_window(window):
 def test_basic_fullscreen(fullscreen):
     '''Runs a simple window example'''
     import glfw
-    glfw.init()
+    assert glfw.init() == glfw.gl.TRUE
+
     assert fullscreen != glfw.ffi.NULL
     for x in range(2):
         assert glfw.swap_buffers(fullscreen) is None
@@ -78,7 +81,8 @@ def test_basic_fullscreen(fullscreen):
 def test_basic_windowed_fullscreen(windowed_fullscreen):
     '''Runs a simple window example'''
     import glfw
-    glfw.init()
+    assert glfw.init() == glfw.gl.TRUE
+
     assert windowed_fullscreen != glfw.ffi.NULL
     for x in range(2):
         assert glfw.swap_buffers(windowed_fullscreen) is None
@@ -90,7 +94,7 @@ def test_basic_windowed_fullscreen(windowed_fullscreen):
 @pytest.mark.unit
 def test_opengl_compatibility(opengl_version, opengl_info):
     import glfw
-    glfw.init()
+    assert glfw.init() == glfw.gl.TRUE
 
     if 'extensions' in opengl_info:
         for extension in opengl_info.get('extensions'):
@@ -107,7 +111,7 @@ def test_opengl_compatibility(opengl_version, opengl_info):
 @pytest.mark.unit
 def test_basic_monitor(primary_monitor):
     import glfw
-    glfw.init()
+    assert glfw.init() == glfw.gl.TRUE
 
     mon = glfw.get_primary_monitor()
     assert mon == primary_monitor.handle
@@ -129,7 +133,7 @@ def test_basic_monitor(primary_monitor):
 @pytest.mark.unit
 def test_multi_monitor_create_window():
     import glfw
-    glfw.init()
+    assert glfw.init() == glfw.gl.TRUE
 
     monitors = glfw.get_monitors()
     last_monitor = monitors[-1]
@@ -145,7 +149,8 @@ def test_multi_monitor_create_window():
 # @pytest.mark.unit
 # def test_create_window_exception():
 #     import glfw
-#     glfw.init()
+#     assert glfw.init() == glfw.gl.TRUE
+
 
 #     with pytest.raises(RuntimeError):
 #         glfw.terminate()
@@ -156,7 +161,7 @@ def test_multi_monitor_create_window():
 @pytest.mark.unit
 def test_api_monitor():
     import glfw
-    glfw.init()
+    assert glfw.init() == glfw.gl.TRUE
 
     mon = glfw.Monitor()
 
@@ -164,7 +169,7 @@ def test_api_monitor():
 @pytest.mark.unit
 def test_ffi_string():
     import glfw
-    glfw.init()
+    assert glfw.init() == glfw.gl.TRUE
 
     test_string = b'hello, world'
     my_string = glfw.ffi.new('char[]', test_string)
