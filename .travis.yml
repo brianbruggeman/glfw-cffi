@@ -79,8 +79,8 @@ script:
   - circusctl list
   - circusctl status xvfb
   - circusctl stats xvfb
-  - python -c 'import glfw; print(glfw.init())'
-  - python -m pytest --cov-append --cov=glfw -vv -s
+  - python -c 'import glfw; print("glfw_initialized == {}".format(glfw.init() == glfw.gl.TRUE))'
+  - python -m pytest --cov-append --cov=glfw -vv -s --color=yes --showlocals
 
 after_success:
    - coveralls
