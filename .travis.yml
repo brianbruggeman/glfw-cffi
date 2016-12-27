@@ -68,9 +68,6 @@ before_install:
   - pip install -e .[tests]
   - pip install circus
 
-  # glfw-cffi requires a working X11 display to run any tests
-  - circusd circus.ini --daemon
-
 install:
    - pip install tox-travis
 
@@ -85,7 +82,10 @@ before_script:
 # command to run tests
 script:
    # Run each separately so we have an idea of what's broken in travis
-   - tox
+  # glfw-cffi requires a working X11 display to run any tests
+  - circusd circus.ini --daemon
+  - circusctl list
+  - tox
 
 after_success:
    - coveralls
