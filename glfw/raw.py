@@ -263,9 +263,9 @@ def _load_library(library_path, ffi):
     '''Loads a library file given a path'''
     try:
         lib = ffi.dlopen(library_path)
-    except Exception as e:
+    except OSError:
         import traceback as tb
-        print(tb.format_exc(e))
+        print(tb.format_exc())
         lib = None
     return lib
 
@@ -273,6 +273,8 @@ def _load_library(library_path, ffi):
 def _find_library(library_name, ffi, path=None):
     '''Attempts to find and and load library name given path'''
     path = os.getcwd() if path is None else path
+    if not library_name:
+        return (None, '')
     path = path.strip('"')
     path = os.path.abspath(path)
     # Try three different methods
@@ -286,7 +288,7 @@ def _find_library(library_name, ffi, path=None):
 
     # Next try ctypes find library
     if not isinstance(library_name, (tuple, list)):
-        library_name = [library_name]
+        library_name = tuple(library_name)
     for libname in library_name:
         lib_path = _ctypes_find_library(libname)
         if lib_path:
@@ -523,7 +525,9 @@ _ffi, _glfw = _initialize_module(FFI())
 globs = {k: v for k, v in globals().items()}
 for func in globs:
     if func not in ['_ffi', '_glfw']:
-        if (func.startswith('_') and not func.startswith('__')) or func in ['modname']:
+        if (func.startswith('_') and not func.startswith('__')):
+            pass
+        elif func in ['modname']:
             globals().pop(func)
 globals().pop('globs')
 globals().pop('func')

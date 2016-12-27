@@ -80,7 +80,7 @@ script:
   - circusctl status xvfb
   - circusctl stats xvfb
   - python -c 'import glfw; print("glfw_initialized == {}".format(glfw.init() == glfw.gl.TRUE))'
-  - python -m pytest --cov-append --cov=glfw -vv -s --color=yes --showlocals
+  - py.test
 
 after_success:
    - coveralls

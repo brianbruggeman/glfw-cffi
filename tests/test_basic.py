@@ -4,6 +4,7 @@ from __future__ import print_function, division
 
 from pprint import pprint as pp
 
+import cffi
 import pytest
 
 
@@ -131,18 +132,54 @@ def test_basic_monitor(primary_monitor):
 
 
 @pytest.mark.unit
-def test_multi_monitor_create_window():
+@pytest.mark.parametrize("width, height, title, monitor, context, raise_exception", [
+    (1, 1, 'pixel window', None, None, True),
+    (640, 480, 'standard window', None, None, True),
+    (None, None, 'full-screen none window', None, None, True),
+    (None, None, 'full-screen primary windowed', 'primary', None, True),
+    (None, None, 'full-screen last window', 'last', None, True),
+    (None, None, 'full-screen string window', 'next-named', None, True),
+    (None, None, 'full-screen no name window', 'no-name', None, True),
+])
+def test_create_window(width, height, title, monitor, context, raise_exception):
     import glfw
     assert glfw.init() == glfw.gl.TRUE
 
     monitors = glfw.get_monitors()
     last_monitor = monitors[-1]
+    if isinstance(monitor, str):
+        if monitor == 'last':
+            monitor = last_monitor
+        if monitor == 'next-named':
+            monitor = monitors[-1].name
 
     window = glfw.create_window(
-        width=last_monitor.width,
-        height=last_monitor.height,
-        title='Multi-monitor test',
-        monitor=last_monitor)
+        width=width,
+        height=height,
+        title=title,
+        monitor=monitor,
+        context=context,
+        raise_exception=raise_exception)
+    assert isinstance(window, glfw.ffi.CData)
+
+
+@pytest.mark.unit
+def test_monitor_repr():
+    import glfw
+    assert glfw.init() == glfw.gl.TRUE
+
+    monitor = glfw.get_monitors()[-1]
+    name = monitor.name
+    if hasattr(name, 'decode'):
+        name = name.decode('utf-8')
+    string = '<{cname} {primary} [{width}, {height}] {name}>'
+    assert str(monitor) == string.format(
+        cname=monitor.__class__.__name__,
+        primary='*' if monitor.primary else ' ',
+        width=monitor.width,
+        height=monitor.height,
+        name=name,
+    )
 
 
 # TODO: Fix this test.
@@ -151,11 +188,39 @@ def test_multi_monitor_create_window():
 #     import glfw
 #     assert glfw.init() == glfw.gl.TRUE
 
-
 #     with pytest.raises(RuntimeError):
-#         glfw.terminate()
+#         monitor = glfw.Monitor()
 
-#         window = glfw.create_window(title='Window Exception test')
+#         win1 = glfw.create_window(width=monitor.width, height=monitor.height, title='win1')
+#         glfw.terminate()
+#         win2 = glfw.create_window(
+#             width=monitor.width,
+#             height=monitor.height,
+#             title='Window Exception test',
+#             monitor=None,
+#             context=win1,
+#             raise_exception=True)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("libname, expected_output", [
+    (None, 'error'),
+    ('', 'error'),
+    ('glfw', 'error'),
+    ('glfw3', 'error'),
+])
+def test_load_library(capfd, libname, expected_output):
+    import glfw
+    find_lib, libpath = glfw.raw._find_library(libname, glfw.ffi)
+    lib = glfw.raw._load_library(libpath, glfw.ffi)
+    resout, reserr = capfd.readouterr()
+    if expected_output == 'no-error':
+        assert lib is not None
+        assert resout == ''
+        assert reserr == ''
+    else:
+        assert 'OSError: library not found' in resout
+        assert lib is None
 
 
 @pytest.mark.unit
@@ -164,6 +229,7 @@ def test_api_monitor():
     assert glfw.init() == glfw.gl.TRUE
 
     mon = glfw.Monitor()
+    assert mon.handle is not None
 
 
 @pytest.mark.unit

@@ -84,7 +84,7 @@ def test_shaders_2d_triangle(window):
     from glfw import gl
 
     vshader = '''
-    #version 410
+    #version 330
 
     in vec2 position;
     in vec3 color;
@@ -98,7 +98,7 @@ def test_shaders_2d_triangle(window):
     }
     '''
     fshader = '''
-    #version 410
+    #version 330
 
     in vec3 v_color;
 
@@ -149,31 +149,34 @@ def test_shaders_2d_triangle(window):
     gl.glCompileShader(vertex_shader)
     gl.glCompileShader(fragment_shader)
 
-    # v_result = gl.glGetShaderiv(vertex_shader, gl.GL_COMPILE_STATUS)
+    v_result = gl.glGetShaderiv(vertex_shader, gl.GL_COMPILE_STATUS)
+    assert v_result == gl.TRUE
     v_log = gl.glGetShaderiv(vertex_shader, gl.GL_INFO_LOG_LENGTH)
-    if v_log > 0:
+    if v_log > 1:
         v_error_message = gl.glGetShaderInfoLog(vertex_shader)
         error_message = v_error_message.split(':')[-1].strip()
-        print('ERROR: Vertex Shader Compilation | {}'.format(error_message))
+        print('ERROR - Vertex Shader Compilation: {}'.format(error_message))
 
-    # f_result = gl.glGetShaderiv(fragment_shader, gl.GL_COMPILE_STATUS)
+    f_result = gl.glGetShaderiv(fragment_shader, gl.GL_COMPILE_STATUS)
+    assert f_result == gl.TRUE
     f_log = gl.glGetShaderiv(fragment_shader, gl.GL_INFO_LOG_LENGTH)
-    if f_log > 0:
+    if f_log > 1:
         f_error_message = gl.glGetShaderInfoLog(fragment_shader)
         error_message = f_error_message.split(':')[-1].strip()
-        print('ERROR: Fragment Shader Compilation | {}'.format(error_message))
+        print('ERROR - Fragment Shader Compilation: {}'.format(error_message))
 
     # Link Shaders to Program
     gl.glAttachShader(program, vertex_shader)
     gl.glAttachShader(program, fragment_shader)
     gl.glLinkProgram(program)
 
-    # p_result = gl.glGetProgramiv(program, gl.GL_LINK_STATUS)
+    p_result = gl.glGetProgramiv(program, gl.GL_LINK_STATUS)
+    assert p_result == gl.TRUE
     p_log = gl.glGetProgramiv(program, gl.GL_INFO_LOG_LENGTH)
-    if p_log > 0:
+    if p_log > 1:
         p_error_message = gl.glGetProgramInfoLog(program)
         error_message = p_error_message.split(':')[-1].strip()
-        print('ERROR: Program Linking | {}'.format(error_message))
+        print('ERROR - Program Linking: {}'.format(error_message))
 
     # Cleanup shaders
     gl.glDetachShader(program, vertex_shader)

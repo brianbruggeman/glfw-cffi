@@ -34,7 +34,7 @@ def get_include():
     return include_path
 
 
-def create_window(width=None, height=None, title=None, monitor=None, share=None, raise_exception=False):
+def create_window(width=None, height=None, title=None, monitor=None, context=None, raise_exception=False):
     '''Creates a window
 
     If a monitor is specified, then by default the application will
@@ -45,6 +45,16 @@ def create_window(width=None, height=None, title=None, monitor=None, share=None,
     This is common when switching between full-screen and windowed
     mode.  During this operation, the window must be destroyed and
     re-created.
+
+    Args:
+        width(int): Width of the window [defaults to monitor width]
+        height(int): Height of the window [defaults to monitor height]
+        title(str): Name of the window [default: Untitled]
+        monitor: monitor or monitor handle [default: primary monitor]
+        context: shared context
+
+    Returns:
+        ffi.CData: window handle
     '''
     primary_monitor = core.get_primary_monitor()
     modes = core.get_video_mode(primary_monitor)[0]
@@ -58,7 +68,7 @@ def create_window(width=None, height=None, title=None, monitor=None, share=None,
     elif isinstance(monitor, int) and monitor < len(monitors):
         # monitor is an index
         monitor = monitors[monitor].handle or raw._ffi.NULL
-    elif isinstance(monitor, str):
+    elif isinstance(monitor, (str, bytes)):
         # monitor is the name of a monitor
         if monitor.lower() == 'primary':
             monitor = primary_monitor
@@ -72,14 +82,14 @@ def create_window(width=None, height=None, title=None, monitor=None, share=None,
                 monitor = raw._ffi.NULL
     if monitor is None:
         monitor = primary_monitor
-    if share is None:
-        share = raw._ffi.NULL
+    if context is None:
+        context = raw._ffi.NULL
     args = (
         width,
         height,
         string_ffi(title),
         monitor or raw._ffi.NULL,
-        share or raw._ffi.NULL
+        context or raw._ffi.NULL
     )
     win = core.create_window(*args)
     if win == raw._ffi.NULL and raise_exception:
@@ -89,7 +99,7 @@ def create_window(width=None, height=None, title=None, monitor=None, share=None,
             'height': height,
             'title': ffi_string(title),
             'monitor': monitor,
-            'share': share,
+            'share': context,
         }
         raise RuntimeError('Could not create window with args: {}'.format(args))
     return win
