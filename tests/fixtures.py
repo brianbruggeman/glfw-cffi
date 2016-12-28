@@ -9,17 +9,20 @@ def setup_window(major, minor):
     assert glfw.init() == glfw.gl.TRUE
 
     version = (major, minor)
-    glfw.window_hint(glfw.FOCUSED, False)
-    glfw.window_hint(glfw.VISIBLE, False)
-    glfw.window_hint(glfw.SAMPLES, 4)
-    glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, major)
-    glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, minor)
+
     # Setup profile if less than opengl 3.2
     profile = glfw.OPENGL_ANY_PROFILE if version < (3, 2) else glfw.OPENGL_CORE_PROFILE
-    glfw.window_hint(glfw.OPENGL_PROFILE, profile)
     # Setup forward compatibility if able
     forward_compat = gl.GL_FALSE if version < (3, 0) else gl.GL_TRUE
+
+    # Hide and remove window focus
+    glfw.window_hint(glfw.FOCUSED, False)
+    glfw.window_hint(glfw.VISIBLE, False)
+    glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, major)
+    glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, minor)
+    glfw.window_hint(glfw.OPENGL_PROFILE, profile)
     glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, forward_compat)
+    glfw.window_hint(glfw.SAMPLES, 4)
     glfw.window_hint(glfw.RED_BITS, 24)
     glfw.window_hint(glfw.GREEN_BITS, 24)
     glfw.window_hint(glfw.BLUE_BITS, 24)
