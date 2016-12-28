@@ -48,10 +48,10 @@ def opengl_version(primary_monitor):
     assert glfw.init() == glfw.gl.TRUE
 
     win = glfw.create_window()
-    print(glfw.gl.get_string(glfw.gl.VERSION))
+    print('GL Version: {}'.format(glfw.gl.get_string(glfw.gl.VERSION)))
     default_major = glfw.gl.get_integerv(glfw.gl.MAJOR_VERSION)
-    default_minor = glfw.gl.get_integerv(glfw.gl.MAJOR_VERSION)
-    print(default_major, default_minor)
+    default_minor = glfw.gl.get_integerv(glfw.gl.MINOR_VERSION)
+    print('getIntegerV(Major,Minor): {}'.format((default_major, default_minor)))
 
     opengl_version = None
     versions = [

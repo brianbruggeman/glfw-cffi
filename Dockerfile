@@ -15,4 +15,4 @@ RUN $PROJECT_HOME/bootstrap-ubuntu.sh
 RUN vex -m $PROJECT /bin/bash -c 'cd $PROJECT_HOME && pip install -e .[tests]'
 RUN vex $PROJECT /bin/bash -c 'cd $PROJECT_HOME && pip install circus'
 
-CMD vex $PROJECT /bin/bash -c 'cd $PROJECT_HOME && circusd circus.ini --daemon && py.test'
+CMD vex $PROJECT /bin/bash -c 'cd $PROJECT_HOME && circusd circus-startup-xvfb.ini --daemon && py.test'
