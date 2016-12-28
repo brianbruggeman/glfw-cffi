@@ -77,7 +77,7 @@ script:
   - circusctl status xvfb
   - circusctl stats xvfb
   - python -c 'import glfw; assert glfw.init() == glfw.gl.TRUE'
-  - glxgears -info
+  - glxinfo
   - py.test
 
 after_success:
