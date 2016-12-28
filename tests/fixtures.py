@@ -6,6 +6,7 @@ def setup_window(major, minor):
     import glfw
     from glfw import gl
     glfw.init()
+    assert glfw.init() == glfw.gl.TRUE
 
     version = (major, minor)
     glfw.window_hint(glfw.FOCUSED, False)
@@ -32,6 +33,7 @@ def setup_window(major, minor):
 def primary_monitor():
     import glfw
     glfw.init()
+    assert glfw.init() == glfw.gl.TRUE
 
     handle = glfw.core.glfwGetPrimaryMonitor()
     mon = glfw.Monitor(handle)
@@ -43,6 +45,7 @@ def opengl_version(primary_monitor):
     import glfw
     from glfw import ffi
     glfw.init()
+    assert glfw.init() == glfw.gl.TRUE
 
     opengl_version = None
     versions = [
@@ -67,9 +70,12 @@ def opengl_version(primary_monitor):
                 if opengl_version is None:
                     opengl_version = (major, minor)
                     break
+            else:
+                emsg = 'Could not create context using GL version: {major}.{minor}'
+                print(emsg.format(major=major, minor=minor))
         except Exception as e:
             import traceback
-            print(traceback.format_exc(e))
+            print(traceback.format_exc())
             opengl_version = None
     if opengl_version is None:
         raise RuntimeError('OpenGL context could not be generated.')
@@ -80,6 +86,7 @@ def opengl_version(primary_monitor):
 def window(primary_monitor, opengl_version):
     import glfw
     glfw.init()
+    assert glfw.init() == glfw.gl.TRUE
 
     major, minor = opengl_version
     setup_window(major, minor)
@@ -97,6 +104,7 @@ def opengl_info(opengl_version, window):
     import glfw
     from glfw import gl
     glfw.init()
+    assert glfw.init() == glfw.gl.TRUE
 
     glfw.make_context_current(window)
     opengl_info = {
@@ -115,6 +123,7 @@ def opengl_info(opengl_version, window):
 def fullscreen(primary_monitor, opengl_version):
     import glfw
     glfw.init()
+    assert glfw.init() == glfw.gl.TRUE
 
     major, minor = opengl_version
     setup_window(major, minor)
@@ -132,6 +141,7 @@ def fullscreen(primary_monitor, opengl_version):
 def windowed_fullscreen(primary_monitor, opengl_version):
     import glfw
     glfw.init()
+    assert glfw.init() == glfw.gl.TRUE
 
     major, minor = opengl_version
     setup_window(major, minor)
