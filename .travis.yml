@@ -3,11 +3,8 @@ language: python
 cache: pip
 dist: trusty  # wily
 python:
-    - "pypy"
     - "2.7"
-    - "3.5"
     - "3.6"
-    - "nightly" # currently points to 3.7-dev
 
 branches:
     only:
@@ -19,10 +16,15 @@ os:
 env:
   global:
     - WORKON_HOME=$HOME/.local/envs
-    - GLFW_VERSION=3.2.1
     - GLFW_LIBRARY=/opt/glfw
     - DISPLAY=:99.0
     - GLFW_LIBRARY=$HOME/lib/libglfw.so
+  matrix:
+    - GLFW_VERSION=3.2.1
+    - GLFW_VERSION=3.2
+    - GLFW_VERSION=3.1.2
+    - GLFW_VERSION=3.1.1
+    - GLFW_VERSION=3.1
 
 addons:
   apt:
@@ -43,8 +45,10 @@ addons:
 matrix:
   fast_finish: true
   allow_failures:
+      - python: "3.4"
       - python: "3.5"
-      - python: "nightly"
+      - python: "3.7"
+      - python: "nightly"  # points to 3.7-dev currently (2016-12-28)
 
 # Install system dependencies
 before_install:
