@@ -75,10 +75,10 @@ def opengl_version(primary_monitor):
             window = glfw.create_window(width=width, height=height, title=title, monitor=primary_monitor)
             if window != ffi.NULL:
                 glfw.destroy_window(window)
-                if opengl_version in set(None, (0, 0), default):
+                if opengl_version in set((None, (0, 0), default)):
                     opengl_version = (major, minor)
                     break
-            else:
+            elif 0:
                 emsg = 'Could not create context using GL version: {major}.{minor}'
                 print(emsg.format(major=major, minor=minor))
         except Exception as e:
