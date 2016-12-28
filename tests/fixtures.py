@@ -20,8 +20,6 @@ def setup_window(major, minor):
     # Setup forward compatibility if able
     forward_compat = gl.GL_FALSE if version < (3, 0) else gl.GL_TRUE
     glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, forward_compat)
-    glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
-    glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, True)
     glfw.window_hint(glfw.RED_BITS, 24)
     glfw.window_hint(glfw.GREEN_BITS, 24)
     glfw.window_hint(glfw.BLUE_BITS, 24)
@@ -47,15 +45,15 @@ def opengl_version(primary_monitor):
     glfw.init()
     assert glfw.init() == glfw.gl.TRUE
 
-    win = glfw.create_window()
-    print('GL Version: {}'.format(glfw.gl.get_string(glfw.gl.VERSION)))
-    default = (
-        glfw.gl.get_integerv(glfw.gl.MAJOR_VERSION),
-        glfw.gl.get_integerv(glfw.gl.MINOR_VERSION)
-    )
-    print('getIntegerV(Major,Minor): {}'.format(default))
+    # win = glfw.create_window()
+    # print('GL Version: {}'.format(glfw.gl.get_string(glfw.gl.VERSION)))
+    # default = (
+    #     glfw.gl.get_integerv(glfw.gl.MAJOR_VERSION),
+    #     glfw.gl.get_integerv(glfw.gl.MINOR_VERSION)
+    # )
+    # print('getIntegerV(Major,Minor): {}'.format(default))
 
-    opengl_version = default
+    opengl_version = None
     versions = [
         (4, 5), (4, 4), (4, 3), (4, 2), (4, 1), (4, 0),
         (3, 3), (3, 2), (3, 1), (3, 0),
@@ -75,7 +73,7 @@ def opengl_version(primary_monitor):
             window = glfw.create_window(width=width, height=height, title=title, monitor=primary_monitor)
             if window != ffi.NULL:
                 glfw.destroy_window(window)
-                if opengl_version in set((None, (0, 0), default)):
+                if opengl_version is None:
                     opengl_version = (major, minor)
                     break
             elif 0:
