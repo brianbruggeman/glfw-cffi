@@ -49,11 +49,13 @@ def opengl_version(primary_monitor):
 
     win = glfw.create_window()
     print('GL Version: {}'.format(glfw.gl.get_string(glfw.gl.VERSION)))
-    default_major = glfw.gl.get_integerv(glfw.gl.MAJOR_VERSION)
-    default_minor = glfw.gl.get_integerv(glfw.gl.MINOR_VERSION)
-    print('getIntegerV(Major,Minor): {}'.format((default_major, default_minor)))
+    default = (
+        glfw.gl.get_integerv(glfw.gl.MAJOR_VERSION),
+        glfw.gl.get_integerv(glfw.gl.MINOR_VERSION)
+    )
+    print('getIntegerV(Major,Minor): {}'.format(default))
 
-    opengl_version = None
+    opengl_version = default
     versions = [
         (4, 5), (4, 4), (4, 3), (4, 2), (4, 1), (4, 0),
         (3, 3), (3, 2), (3, 1), (3, 0),
@@ -73,7 +75,7 @@ def opengl_version(primary_monitor):
             window = glfw.create_window(width=width, height=height, title=title, monitor=primary_monitor)
             if window != ffi.NULL:
                 glfw.destroy_window(window)
-                if opengl_version is None:
+                if opengl_version in set(None, (0, 0), default):
                     opengl_version = (major, minor)
                     break
             else:
