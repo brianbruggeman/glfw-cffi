@@ -79,7 +79,7 @@ script:
   - circusctl list
   - circusctl status xvfb
   - circusctl stats xvfb
-  - python -c 'import glfw; print("glfw_initialized == {}".format(glfw.init() == glfw.gl.TRUE))'
+  - python -c 'import glfw; assert glfw.init() == glfw.gl.TRUE'
   - py.test
 
 after_success:

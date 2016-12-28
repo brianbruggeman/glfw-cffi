@@ -60,7 +60,7 @@ def create_window(width=None, height=None, title=None, monitor=None, context=Non
     modes = core.get_video_mode(primary_monitor)[0]
     width = modes.width if width is None else width
     height = modes.height if height is None else height
-    title = "Untitled" if title is None else title
+    title = b"Untitled" if title is None else title
     monitors = get_monitors()
 
     if isinstance(monitor, Monitor):
