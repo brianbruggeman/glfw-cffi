@@ -33,7 +33,7 @@ addons:
       - &sound_packages ['libpulse-dev', 'libasound2-dev']
       - &mesa_packages [
           'libegl1-mesa', 'libglu1-mesa-dev', 'libgl1-mesa-dev',
-          'libglu1-mesa-dev']
+          'libglu1-mesa-dev', 'mesa-utils']
       - &x11_packages [
           'xorg-dev', 'libdbus-1-dev', 'libx11-dev', 'libxcursor-dev',
           'libxext-dev', 'libxi-dev', 'libxinerama-dev', 'libxrandr-dev',
